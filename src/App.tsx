@@ -36,17 +36,19 @@ import AdminMarketing from "./pages/admin/Marketing";
 import AdminConfiguracion from "./pages/admin/Configuracion";
 import AdminNotificaciones from "./pages/admin/Notificaciones";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useAppStore } from "@/store/useAppStore";
+import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const setAuthed = useAppStore((s) => s.setAuthed);
   const setUser = useAppStore((s) => s.setUser);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     let unsubscribeFirestore: (() => void) | null = null;
@@ -70,8 +72,10 @@ const App = () => {
               ...docSnap.data()
             });
           }
+          setInitializing(false);
         }, (error) => {
           console.error("Error fetching user profile:", error);
+          setInitializing(false);
         });
       } else {
         setAuthed(false);
@@ -80,6 +84,7 @@ const App = () => {
           unsubscribeFirestore();
           unsubscribeFirestore = null;
         }
+        setInitializing(false);
       }
     });
 
@@ -90,6 +95,17 @@ const App = () => {
       }
     };
   }, [setAuthed, setUser]);
+
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-background grid place-items-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Iniciando aplicación...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
   <QueryClientProvider client={queryClient}>
@@ -102,35 +118,44 @@ const App = () => {
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/register" element={<Register />} />
-          <Route path="/app" element={<AppLayout />}>
-            <Route index element={<Home />} />
-            <Route path="explorar" element={<Explorar />} />
-            <Route path="propiedad/:id" element={<PropertyDetail />} />
-            <Route path="portafolio" element={<Portafolio />} />
-            <Route path="pagos" element={<Pagos />} />
-            <Route path="perfil" element={<Perfil />} />
-            <Route path="perfil/informacion" element={<PerfilInformacion />} />
-            <Route path="perfil/kyc" element={<PerfilKYC />} />
-            <Route path="perfil/seguridad" element={<PerfilSeguridad />} />
-            <Route path="perfil/notificaciones" element={<PerfilNotifPrefs />} />
-            <Route path="perfil/reportes" element={<PerfilReportes />} />
-            <Route path="perfil/fiscal" element={<PerfilFiscal />} />
-            <Route path="perfil/ayuda" element={<PerfilAyuda />} />
-            <Route path="perfil/terminos" element={<PerfilTerminos />} />
-            <Route path="notificaciones" element={<Notificaciones />} />
+          
+          {/* Protected Investor Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/app" element={<AppLayout />}>
+              <Route index element={<Home />} />
+              <Route path="explorar" element={<Explorar />} />
+              <Route path="propiedad/:id" element={<PropertyDetail />} />
+              <Route path="portafolio" element={<Portafolio />} />
+              <Route path="pagos" element={<Pagos />} />
+              <Route path="perfil" element={<Perfil />} />
+              <Route path="perfil/informacion" element={<PerfilInformacion />} />
+              <Route path="perfil/kyc" element={<PerfilKYC />} />
+              <Route path="perfil/seguridad" element={<PerfilSeguridad />} />
+              <Route path="perfil/notificaciones" element={<PerfilNotifPrefs />} />
+              <Route path="perfil/reportes" element={<PerfilReportes />} />
+              <Route path="perfil/fiscal" element={<PerfilFiscal />} />
+              <Route path="perfil/ayuda" element={<PerfilAyuda />} />
+              <Route path="perfil/terminos" element={<PerfilTerminos />} />
+              <Route path="notificaciones" element={<Notificaciones />} />
+            </Route>
           </Route>
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="propiedades" element={<AdminPropiedades />} />
-            <Route path="propiedades/nueva" element={<AdminNuevaPropiedad />} />
-            <Route path="inversores" element={<AdminInversores />} />
-            <Route path="transacciones" element={<AdminTransacciones />} />
-            <Route path="distribuciones" element={<AdminDistribuciones />} />
-            <Route path="kyc" element={<AdminKYC />} />
-            <Route path="marketing" element={<AdminMarketing />} />
-            <Route path="configuracion" element={<AdminConfiguracion />} />
-            <Route path="notificaciones" element={<AdminNotificaciones />} />
+
+          {/* Protected Admin Routes */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="propiedades" element={<AdminPropiedades />} />
+              <Route path="propiedades/nueva" element={<AdminNuevaPropiedad />} />
+              <Route path="inversores" element={<AdminInversores />} />
+              <Route path="transacciones" element={<AdminTransacciones />} />
+              <Route path="distribuciones" element={<AdminDistribuciones />} />
+              <Route path="kyc" element={<AdminKYC />} />
+              <Route path="marketing" element={<AdminMarketing />} />
+              <Route path="configuracion" element={<AdminConfiguracion />} />
+              <Route path="notificaciones" element={<AdminNotificaciones />} />
+            </Route>
           </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
