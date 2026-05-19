@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if the user is authenticated
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(userId) {
+      return isAuthed() && request.auth.uid == userId;
+    }
+
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return isAuthed() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'director'
+        );
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed();
+      allow update, delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Properties collection
+    match /properties/{propertyId} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    // Investments collection
+    match /investments/{investmentId} {
+      allow read: if isAuthed() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthed() && (request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Transactions collection
+    match /transactions/{transactionId} {
+      allow read: if isAuthed() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAuthed() && (request.resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}

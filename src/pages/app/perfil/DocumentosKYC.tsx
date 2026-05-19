@@ -40,27 +40,15 @@ export default function DocumentosKYC() {
 
   useEffect(() => {
     if (currentUser) {
-      setCedulaUploaded(!!currentUser.cedulaUploaded || kycStatus !== "pending");
-      setSelfieUploaded(!!currentUser.selfieUploaded || kycStatus !== "pending");
-      setAddressUploaded(!!currentUser.addressUploaded);
-      setIncomeUploaded(!!currentUser.incomeUploaded);
-      setBankUploaded(!!currentUser.bankUploaded);
-      setRncUploaded(!!currentUser.rncUploaded);
-      setPepUploaded(!!currentUser.pepUploaded);
+      setCedulaUploaded(!!currentUser.cedulaUrl);
+      setSelfieUploaded(!!currentUser.selfieUrl);
+      setAddressUploaded(!!currentUser.addressUrl);
+      setIncomeUploaded(!!currentUser.incomeUrl);
+      setBankUploaded(!!currentUser.bankUrl);
+      setRncUploaded(!!currentUser.rncUrl);
+      setPepUploaded(!!currentUser.pepUrl);
     }
-  }, [currentUser, kycStatus]);
-
-  const getRequiredDocStatus = (uploaded: boolean) => {
-    if (kycStatus === "verified") return "verified";
-    if (kycStatus === "submitted") return "review";
-    return uploaded ? "review" : "pending";
-  };
-
-  const getRequiredDocDate = (uploaded: boolean) => {
-    if (kycStatus === "verified") return "Verificado";
-    if (kycStatus === "submitted") return "Subido en registro";
-    return uploaded ? "Subido hoy" : "—";
-  };
+  }, [currentUser]);
 
   const docs: Doc[] = [
     {
@@ -68,8 +56,8 @@ export default function DocumentosKYC() {
       label: "Cédula (frontal y reverso)",
       hint: "JCE — vigente y legible",
       icon: IdCard,
-      status: getRequiredDocStatus(cedulaUploaded),
-      date: getRequiredDocDate(cedulaUploaded),
+      status: kycStatus === "verified" ? "verified" : (currentUser?.cedulaUrl ? "review" : "pending"),
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.cedulaUrl ? "Subido" : "—"),
       required: true,
       url: currentUser?.cedulaUrl
     },
@@ -78,8 +66,8 @@ export default function DocumentosKYC() {
       label: "Selfie con cédula",
       hint: "Validación biométrica con Veriff",
       icon: ScanFace,
-      status: getRequiredDocStatus(selfieUploaded),
-      date: getRequiredDocDate(selfieUploaded),
+      status: kycStatus === "verified" ? "verified" : (currentUser?.selfieUrl ? "review" : "pending"),
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.selfieUrl ? "Subido" : "—"),
       required: true,
       url: currentUser?.selfieUrl
     },
@@ -88,8 +76,8 @@ export default function DocumentosKYC() {
       label: "Comprobante de dirección",
       hint: "Factura EDE/CAASD/telefonía no mayor a 3 meses",
       icon: FileCheck2,
-      status: kycStatus === "verified" ? "verified" : addressUploaded ? "review" : "pending",
-      date: addressUploaded ? "Subido hoy" : "—",
+      status: kycStatus === "verified" ? "verified" : (currentUser?.addressUrl ? "review" : "pending"),
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.addressUrl ? "Subido" : "—"),
       required: true,
       url: currentUser?.addressUrl
     },
@@ -98,8 +86,8 @@ export default function DocumentosKYC() {
       label: "Comprobante de ingresos",
       hint: "Carta de trabajo, últimos 3 estados de cuenta o IR-1/IR-2",
       icon: Receipt,
-      status: kycStatus === "verified" ? "verified" : incomeUploaded ? "review" : "pending",
-      date: incomeUploaded ? "Subido hoy" : "—",
+      status: kycStatus === "verified" ? "verified" : (currentUser?.incomeUrl ? "review" : "pending"),
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.incomeUrl ? "Subido" : "—"),
       required: true,
       url: currentUser?.incomeUrl
     },
@@ -108,8 +96,8 @@ export default function DocumentosKYC() {
       label: "Certificación bancaria", 
       hint: "Requerido para inversiones > US$10,000", 
       icon: Landmark, 
-      status: kycStatus === "verified" ? "verified" : bankUploaded ? "review" : "pending", 
-      date: bankUploaded ? "Subido hoy" : "—",
+      status: kycStatus === "verified" ? "verified" : (currentUser?.bankUrl ? "review" : "pending"), 
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.bankUrl ? "Subido" : "—"),
       url: currentUser?.bankUrl
     },
     { 
@@ -117,8 +105,8 @@ export default function DocumentosKYC() {
       label: "Constancia de RNC", 
       hint: "Solo si invertirás como persona jurídica", 
       icon: FileSignature, 
-      status: kycStatus === "verified" ? "verified" : rncUploaded ? "review" : "pending", 
-      date: rncUploaded ? "Subido hoy" : "—",
+      status: kycStatus === "verified" ? "verified" : (currentUser?.rncUrl ? "review" : "pending"), 
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.rncUrl ? "Subido" : "—"),
       url: currentUser?.rncUrl
     },
     { 
@@ -126,58 +114,34 @@ export default function DocumentosKYC() {
       label: "Declaración PEP / fuente de fondos", 
       hint: "Origen lícito de los recursos (Ley 155-17)", 
       icon: ShieldAlert, 
-      status: kycStatus === "verified" ? "verified" : pepUploaded ? "review" : "pending", 
-      date: pepUploaded ? "Subido hoy" : "—",
+      status: kycStatus === "verified" ? "verified" : (currentUser?.pepUrl ? "review" : "pending"), 
+      date: kycStatus === "verified" ? "Verificado" : (currentUser?.pepUrl ? "Subido" : "—"),
       url: currentUser?.pepUrl
     },
   ];
 
-  const triggerFileInput = (id: string) => {
-    if (!currentUser?.uid) {
-      toast.error("Sesión inválida");
-      return;
-    }
-    setUploadingId(id);
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docId: string) => {
     const file = e.target.files?.[0];
-    if (!file || !uploadingId || !currentUser?.uid) return;
+    if (!file || !currentUser?.uid) return;
 
+    setUploadingId(docId);
     const toastId = toast.loading(`Subiendo ${file.name}...`);
     try {
-      const storageRef = ref(storage, `kyc/${currentUser.uid}/${uploadingId}_${Date.now()}_${file.name}`);
+      const storageRef = ref(storage, `kyc/${currentUser.uid}/${docId}_${Date.now()}_${file.name}`);
       await uploadBytes(storageRef, file);
       const downloadUrl = await getDownloadURL(storageRef);
 
       const updates: any = {};
-      updates[`${uploadingId}Uploaded`] = true;
-      updates[`${uploadingId}Url`] = downloadUrl;
+      updates[`${docId}Uploaded`] = true;
+      updates[`${docId}Url`] = downloadUrl;
 
-      if (uploadingId === "cedula") {
-        setCedulaUploaded(true);
-      } else if (uploadingId === "selfie") {
-        setSelfieUploaded(true);
-      } else if (uploadingId === "address") {
-        setAddressUploaded(true);
-      } else if (uploadingId === "income") {
-        setIncomeUploaded(true);
-      } else if (uploadingId === "bank") {
-        setBankUploaded(true);
-      } else if (uploadingId === "rnc") {
-        setRncUploaded(true);
-      } else if (uploadingId === "pep") {
-        setPepUploaded(true);
-      }
-
-      const isCed = uploadingId === "cedula" ? true : cedulaUploaded;
-      const isSel = uploadingId === "selfie" ? true : selfieUploaded;
-      const isAddress = uploadingId === "address" ? true : addressUploaded;
-      const isIncome = uploadingId === "income" ? true : incomeUploaded;
+      const isCed = docId === "cedula" ? true : !!currentUser?.cedulaUrl;
+      const isSel = docId === "selfie" ? true : !!currentUser?.selfieUrl;
+      const isAddress = docId === "address" ? true : !!currentUser?.addressUrl;
+      const isIncome = docId === "income" ? true : !!currentUser?.incomeUrl;
 
       // If all required items are uploaded, transition the status
-      if (isCed && isSel && isAddress && isIncome && kycStatus === "pending") {
+      if (isCed && isSel && isAddress && isIncome && (kycStatus === "pending" || kycStatus === "rejected")) {
         updates.kycStatus = "submitted";
         updates.documentsUploaded = true;
         toast.success("¡Documentos requeridos enviados! Verificación en proceso.", { id: toastId });
@@ -191,7 +155,8 @@ export default function DocumentosKYC() {
       console.error(err);
     } finally {
       setUploadingId(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      // Reset input value to allow selecting the same file again
+      e.target.value = "";
     }
   };
 
@@ -201,15 +166,6 @@ export default function DocumentosKYC() {
   return (
     <div className="pb-10">
       <ScreenHeader title="Documentos KYC" back showBell={false} />
-      
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*,application/pdf"
-        onChange={handleFileChange}
-      />
 
       <div className="px-5 mt-2 space-y-4">
         {/* Status header */}
@@ -239,7 +195,7 @@ export default function DocumentosKYC() {
             <DocRow 
               key={d.id} 
               doc={d} 
-              onUpload={() => triggerFileInput(d.id)} 
+              onChange={(e) => handleFileChange(e, d.id)} 
               isUploading={uploadingId === d.id} 
             />
           ))}
@@ -254,7 +210,7 @@ export default function DocumentosKYC() {
             <DocRow 
               key={d.id} 
               doc={d} 
-              onUpload={() => triggerFileInput(d.id)} 
+              onChange={(e) => handleFileChange(e, d.id)} 
               isUploading={uploadingId === d.id} 
             />
           ))}
@@ -269,7 +225,11 @@ export default function DocumentosKYC() {
   );
 }
 
-function DocRow({ doc, onUpload, isUploading }: { doc: Doc; onUpload: () => void; isUploading: boolean }) {
+function DocRow({ doc, onChange, isUploading }: { doc: Doc; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; isUploading: boolean }) {
+  const hasUrl = !!doc.url;
+  const isVerified = doc.status === "verified";
+  const inputId = `file-upload-${doc.id}`;
+
   return (
     <div className="p-4 flex items-start gap-3">
       <doc.icon className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
@@ -279,7 +239,7 @@ function DocRow({ doc, onUpload, isUploading }: { doc: Doc; onUpload: () => void
         <p className="text-[10px] text-muted-foreground mt-1 font-mono">{doc.date}</p>
       </div>
       <div className="flex-shrink-0 flex items-center gap-2">
-        {doc.url && (
+        {hasUrl && (
           <a
             href={doc.url}
             target="_blank"
@@ -289,25 +249,38 @@ function DocRow({ doc, onUpload, isUploading }: { doc: Doc; onUpload: () => void
             Ver
           </a>
         )}
-        {doc.status === "verified" && (
+        {isVerified ? (
           <span className="text-[10px] text-secondary bg-secondary/15 px-2 py-1 rounded-full">Verificado</span>
-        )}
-        {doc.status === "review" && (
-          <span className="text-[10px] text-primary bg-primary/15 px-2 py-1 rounded-full">En revisión</span>
-        )}
-        {doc.status === "pending" && (
-          isUploading ? (
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> Subiendo...
-            </span>
-          ) : (
-            <button
-              onClick={onUpload}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:opacity-80"
-            >
-              <Upload className="h-3.5 w-3.5" /> Subir
-            </button>
-          )
+        ) : (
+          <>
+            {hasUrl ? (
+              <span className="text-[10px] text-primary bg-primary/15 px-2 py-1 rounded-full">En revisión</span>
+            ) : (
+              <span className="text-[10px] text-destructive bg-destructive/15 px-2 py-1 rounded-full">Pendiente</span>
+            )}
+            
+            {isUploading ? (
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Subiendo...
+              </span>
+            ) : (
+              <>
+                <input
+                  type="file"
+                  id={inputId}
+                  className="hidden"
+                  accept="image/*,application/pdf"
+                  onChange={onChange}
+                />
+                <label
+                  htmlFor={inputId}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:opacity-80 cursor-pointer"
+                >
+                  <Upload className="h-3.5 w-3.5" /> {hasUrl ? "Reemplazar" : "Subir"}
+                </label>
+              </>
+            )}
+          </>
         )}
       </div>
     </div>

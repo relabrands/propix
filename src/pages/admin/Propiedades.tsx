@@ -19,38 +19,45 @@ export default function Propiedades() {
 
   useEffect(() => {
     const q = fsQuery(collection(db, "properties"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((docSnap) => {
-        const p = docSnap.data();
-        // Map Firestore status to AdminPropertyStatus
-        let statusMapped: AdminPropertyStatus = "En fondeo";
-        if (p.status === "rentando") {
-          statusMapped = "Activa";
-        } else if (p.status === "cerrada") {
-          statusMapped = "Cerrada";
-        } else if (p.status === "archivada") {
-          statusMapped = "Archivada";
-        }
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((docSnap) => {
+          const p = docSnap.data();
+          // Map Firestore status to AdminPropertyStatus
+          let statusMapped: AdminPropertyStatus = "En fondeo";
+          if (p.status === "rentando") {
+            statusMapped = "Activa";
+          } else if (p.status === "cerrada") {
+            statusMapped = "Cerrada";
+          } else if (p.status === "archivada") {
+            statusMapped = "Archivada";
+          }
 
-        return {
-          id: docSnap.id,
-          name: p.name,
-          image: p.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
-          developer: p.developer?.name || "Desarrolladora",
-          totalPrice: p.totalPrice || 0,
-          totalFractions: p.totalFractions || 1,
-          fractionsSold: p.fractionsSold || 0,
-          fractionPrice: p.pricePerFraction || 0,
-          raised: (p.fractionsSold || 0) * (p.pricePerFraction || 0),
-          roi: p.roiAnnual || 0,
-          monthlyRent: p.monthlyIncomeEstimate || 0,
-          status: statusMapped,
-          location: p.location || "RD",
-        };
-      });
-      setProperties(data);
-      setLoading(false);
-    });
+          return {
+            id: docSnap.id,
+            name: p.name,
+            image: p.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+            developer: p.developer?.name || "Desarrolladora",
+            totalPrice: p.totalPrice || 0,
+            totalFractions: p.totalFractions || 1,
+            fractionsSold: p.fractionsSold || 0,
+            fractionPrice: p.pricePerFraction || 0,
+            raised: (p.fractionsSold || 0) * (p.pricePerFraction || 0),
+            roi: p.roiAnnual || 0,
+            monthlyRent: p.monthlyIncomeEstimate || 0,
+            status: statusMapped,
+            location: p.location || "RD",
+          };
+        });
+        setProperties(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching admin properties:", error);
+        setLoading(false);
+      }
+    );
     return () => unsubscribe();
   }, []);
 

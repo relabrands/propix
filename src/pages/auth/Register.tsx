@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, Upload, Check, Camera } from "lucide-react";
+import { ShieldCheck, Upload, Check, Camera, Loader2 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function Register() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -17,6 +18,11 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [cedulaUploaded, setCedulaUploaded] = useState(false);
   const [selfieUploaded, setSelfieUploaded] = useState(false);
+  const [cedulaUrl, setCedulaUrl] = useState("");
+  const [selfieUrl, setSelfieUrl] = useState("");
+  const [uploadingId, setUploadingId] = useState<"cedula" | "selfie" | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const navigate = useNavigate();
   const setAuthed = useAppStore((s) => s.setAuthed);
   const setUser = useAppStore((s) => s.setUser);
@@ -78,8 +84,37 @@ export default function Register() {
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, id: "cedula" | "selfie") => {
+    const file = e.target.files?.[0];
+    if (!file || !auth.currentUser) return;
+
+    setUploadingId(id);
+    const toastId = toast.loading(`Subiendo ${file.name}...`);
+    try {
+      const storageRef = ref(storage, `kyc/${auth.currentUser.uid}/${id}_${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      if (id === "cedula") {
+        setCedulaUrl(downloadUrl);
+        setCedulaUploaded(true);
+      } else {
+        setSelfieUrl(downloadUrl);
+        setSelfieUploaded(true);
+      }
+
+      toast.success("Documento subido con éxito.", { id: toastId });
+    } catch (err: any) {
+      toast.error("Error al subir archivo: " + err.message, { id: toastId });
+      console.error(err);
+    } finally {
+      setUploadingId(null);
+      e.target.value = "";
+    }
+  };
+
   const handleFinish = async () => {
-    if (!cedulaUploaded || !selfieUploaded) {
+    if (!cedulaUploaded || !selfieUploaded || !cedulaUrl || !selfieUrl) {
       return toast.error("Por favor, sube ambos documentos para verificar tu identidad.");
     }
     if (auth.currentUser) {
@@ -89,7 +124,9 @@ export default function Register() {
           kycStatus: "submitted",
           documentsUploaded: true,
           cedulaUploaded: true,
-          selfieUploaded: true
+          selfieUploaded: true,
+          cedulaUrl,
+          selfieUrl
         }, { merge: true });
         
         toast.success("¡Documentos recibidos! Verificación en proceso.");
@@ -166,6 +203,13 @@ export default function Register() {
             >
               {loading ? "Cargando..." : "Continuar"}
             </button>
+
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              ¿Ya tienes cuenta?{" "}
+              <Link to="/auth/login" className="text-primary font-semibold hover:underline">
+                Inicia sesión
+              </Link>
+            </p>
           </form>
         </div>
       ) : (
@@ -177,18 +221,22 @@ export default function Register() {
 
           <div className="mt-6 space-y-3">
             <UploadTile
+              id="cedula"
               icon={<Upload className="h-5 w-5" />}
               title="Sube tu cédula o pasaporte"
               desc="Frente y reverso · JPG o PDF"
               done={cedulaUploaded}
-              onChange={setCedulaUploaded}
+              isUploading={uploadingId === "cedula"}
+              onChange={(e) => handleFileChange(e, "cedula")}
             />
             <UploadTile
+              id="selfie"
               icon={<Camera className="h-5 w-5" />}
               title="Toma una selfie"
               desc="Para verificación facial"
               done={selfieUploaded}
-              onChange={setSelfieUploaded}
+              isUploading={uploadingId === "selfie"}
+              onChange={(e) => handleFileChange(e, "selfie")}
             />
           </div>
 
@@ -234,36 +282,64 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 function UploadTile({
+  id,
   icon,
   title,
   desc,
   done,
+  isUploading,
   onChange,
 }: {
+  id: string;
   icon: React.ReactNode;
   title: string;
   desc: string;
   done: boolean;
-  onChange: (done: boolean) => void;
+  isUploading: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const inputId = `upload-tile-${id}`;
+
   return (
-    <button
-      onClick={() => onChange(!done)}
-      type="button"
-      className="w-full glass rounded-2xl p-4 flex items-center gap-4 text-left transition-transform active:scale-[0.99]"
+    <label
+      htmlFor={inputId}
+      className={`w-full glass rounded-2xl p-4 flex items-center gap-4 text-left transition-transform active:scale-[0.99] cursor-pointer ${
+        isUploading ? "opacity-70 pointer-events-none" : ""
+      }`}
     >
+      <input
+        type="file"
+        id={inputId}
+        className="hidden"
+        accept="image/*,application/pdf"
+        onChange={onChange}
+      />
       <div
         className={`h-12 w-12 rounded-xl border grid place-items-center transition-all ${
-          done ? "bg-success/15 border-success/40 text-success" : "bg-gradient-gold-soft border-primary/30 text-primary"
+          done 
+            ? "bg-success/15 border-success/40 text-success" 
+            : isUploading 
+            ? "bg-muted border-muted text-muted-foreground" 
+            : "bg-gradient-gold-soft border-primary/30 text-primary"
         }`}
       >
-        {done ? <Check className="h-5 w-5" /> : icon}
+        {isUploading ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : done ? (
+          <Check className="h-5 w-5" />
+        ) : (
+          icon
+        )}
       </div>
       <div className="flex-1">
         <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{done ? "Cargado correctamente" : desc}</p>
+        <p className="text-xs text-muted-foreground">
+          {isUploading ? "Subiendo..." : done ? "Cargado correctamente" : desc}
+        </p>
       </div>
-      <span className="text-xs text-primary">{done ? "Editar" : "Subir"}</span>
-    </button>
+      <span className="text-xs text-primary">
+        {isUploading ? "Cargando" : done ? "Editar" : "Subir"}
+      </span>
+    </label>
   );
 }

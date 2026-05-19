@@ -18,14 +18,21 @@ export default function Explorar() {
 
   useEffect(() => {
     const q = fsQuery(collection(db, "properties"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      })) as unknown as Property[];
-      setProperties(data);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        })) as unknown as Property[];
+        setProperties(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching properties:", error);
+        setLoading(false);
+      }
+    );
     return () => unsubscribe();
   }, []);
 

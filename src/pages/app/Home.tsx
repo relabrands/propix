@@ -114,7 +114,7 @@ export default function Home() {
                     • Completar Información Personal <ArrowRight className="h-3 w-3 animate-pulse" />
                   </Link>
                 )}
-                {(!currentUser?.cedulaUploaded || !currentUser?.selfieUploaded || !currentUser?.addressUploaded || !currentUser?.incomeUploaded) && (
+                 {(!currentUser?.cedulaUrl || !currentUser?.selfieUrl || !currentUser?.addressUrl || !currentUser?.incomeUrl) && (
                   <Link
                     to="/app/perfil/kyc"
                     className="inline-flex items-center gap-1 text-xs text-amber-500 font-semibold hover:underline"
@@ -127,7 +127,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {kycStatus === "inReview" && (
+         {(kycStatus === "submitted" || kycStatus === "inReview") && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}

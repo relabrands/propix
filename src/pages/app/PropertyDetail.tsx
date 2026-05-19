@@ -51,7 +51,7 @@ export default function PropertyDetail() {
     }
 
     // Check what profile/doc fields are missing to show context-sensitive error
-    const missingDocs = !currentUser?.cedulaUploaded && !currentUser?.selfieUploaded && !currentUser?.addressUploaded && !currentUser?.incomeUploaded;
+    const missingDocs = !currentUser?.cedulaUrl || !currentUser?.selfieUrl || !currentUser?.addressUrl || !currentUser?.incomeUrl;
     const missingProfile = !currentUser?.cedula || !currentUser?.nationality || !currentUser?.profession || !currentUser?.economicActivity || !currentUser?.fundsSource;
 
     if (missingProfile) {
