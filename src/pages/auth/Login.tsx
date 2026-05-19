@@ -25,7 +25,12 @@ export default function Login() {
       setAuthed(true);
       setUser(userCredential.user);
       toast.success(`Bienvenido de vuelta${userCredential.user.displayName ? `, ${userCredential.user.displayName}` : ""} 👋`);
-      navigate("/app");
+      
+      if (userCredential.user.email === "robinsonantsanchez@gmail.com") {
+        navigate("/admin");
+      } else {
+        navigate("/app");
+      }
     } catch (error: any) {
       toast.error(error.message || "Credenciales incorrectas");
     } finally {

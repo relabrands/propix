@@ -5,16 +5,17 @@ import { useAppStore } from "@/store/useAppStore";
 
 export default function Splash() {
   const navigate = useNavigate();
-  const { onboarded, authed } = useAppStore();
+  const { onboarded, authed, user } = useAppStore();
 
   useEffect(() => {
     const t = setTimeout(() => {
       if (!onboarded) navigate("/onboarding", { replace: true });
       else if (!authed) navigate("/auth/login", { replace: true });
+      else if (user?.email === "robinsonantsanchez@gmail.com") navigate("/admin", { replace: true });
       else navigate("/app", { replace: true });
     }, 1400);
     return () => clearTimeout(t);
-  }, [navigate, onboarded, authed]);
+  }, [navigate, onboarded, authed, user]);
 
   return (
     <div className="min-h-screen grid place-items-center relative overflow-hidden">
