@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Login() {
   const [show, setShow] = useState(false);
@@ -22,11 +23,22 @@ export default function Login() {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Fetch user profile from Firestore to determine role
+      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : null;
+
       setAuthed(true);
-      setUser(userCredential.user);
+      setUser({
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        displayName: userCredential.user.displayName,
+        ...userData
+      });
+      
       toast.success(`Bienvenido de vuelta${userCredential.user.displayName ? `, ${userCredential.user.displayName}` : ""} 👋`);
       
-      if (userCredential.user.email === "robinsonantsanchez@gmail.com") {
+      if (userData?.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/app");

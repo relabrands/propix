@@ -38,7 +38,7 @@ export default function AdminLayout() {
   const currentUser = useAppStore((s) => s.user);
   const fullName = currentUser?.name || currentUser?.displayName || "Administrador";
   const initials = fullName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() || "AD";
-  const roleLabel = currentUser?.email === "robinsonantsanchez@gmail.com" ? "Super Admin" : "Admin";
+  const roleLabel = currentUser?.role === "admin" ? "Super Admin" : "Admin";
 
   return (
     <div className="min-h-screen bg-background flex">

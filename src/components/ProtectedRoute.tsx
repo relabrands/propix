@@ -18,7 +18,7 @@ export function AdminRoute() {
     return <Navigate to="/auth/login" replace />;
   }
 
-  if (user?.email !== "robinsonantsanchez@gmail.com") {
+  if (user?.role !== "admin") {
     return <Navigate to="/app" replace />;
   }
 

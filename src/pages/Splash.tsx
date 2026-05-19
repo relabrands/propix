@@ -11,7 +11,7 @@ export default function Splash() {
     const t = setTimeout(() => {
       if (!onboarded) navigate("/onboarding", { replace: true });
       else if (!authed) navigate("/auth/login", { replace: true });
-      else if (user?.email === "robinsonantsanchez@gmail.com") navigate("/admin", { replace: true });
+      else if (user?.role === "admin") navigate("/admin", { replace: true });
       else navigate("/app", { replace: true });
     }, 1400);
     return () => clearTimeout(t);
