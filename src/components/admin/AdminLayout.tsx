@@ -17,6 +17,7 @@ import {
   Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/useAppStore";
 
 const NAV = [
   { to: "/admin", end: true, icon: LayoutDashboard, label: "Dashboard General" },
@@ -33,6 +34,11 @@ const NAV = [
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  
+  const currentUser = useAppStore((s) => s.user);
+  const fullName = currentUser?.name || currentUser?.displayName || "Administrador";
+  const initials = fullName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() || "AD";
+  const roleLabel = currentUser?.email === "robinsonantsanchez@gmail.com" ? "Super Admin" : "Admin";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -114,11 +120,11 @@ export default function AdminLayout() {
           </button>
           <div className="flex items-center gap-3 pl-3 border-l border-border">
             <div className="text-right hidden md:block">
-              <div className="text-xs font-medium leading-tight">Andrés Capellán</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Super Admin</div>
+              <div className="text-xs font-medium leading-tight">{fullName}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{roleLabel}</div>
             </div>
             <div className="h-9 w-9 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground text-sm font-semibold ring-2 ring-primary/30">
-              AC
+              {initials}
             </div>
           </div>
         </header>

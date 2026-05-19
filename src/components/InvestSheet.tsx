@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronRight, CreditCard, Landmark, Minus, Plus, Wallet, X } from "lucide-react";
-import type { Property } from "@/lib/mockData";
 import { formatUSD } from "@/lib/format";
 import { Link } from "react-router-dom";
+import { useAppStore } from "@/store/useAppStore";
+import { doc, collection, addDoc, updateDoc, runTransaction } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  property: Property;
+  property: any;
   initialAmount: number;
 }
 
@@ -18,6 +21,9 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
   const [step, setStep] = useState<Step>("amount");
   const [amount, setAmount] = useState(initialAmount);
   const [method, setMethod] = useState<"bank" | "card" | "wallet">("bank");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentUser = useAppStore((s) => s.user);
 
   useEffect(() => {
     if (open) {
@@ -26,9 +32,90 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
     }
   }, [open, initialAmount]);
 
-  const subtotal = amount * property.pricePerFraction;
+  const pricePerFraction = property.pricePerFraction || 0;
+  const subtotal = amount * pricePerFraction;
   const fee = Math.round(subtotal * 0.02);
   const total = subtotal + fee;
+
+  const handleConfirmInvestment = async () => {
+    if (!currentUser) {
+      toast.error("Debes iniciar sesión para invertir.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const propertyRef = doc(db, "properties", property.id);
+      const userRef = doc(db, "users", currentUser.uid);
+
+      await runTransaction(db, async (transaction) => {
+        const propDoc = await transaction.get(propertyRef);
+        if (!propDoc.exists()) {
+          throw new Error("La propiedad no existe.");
+        }
+
+        const data = propDoc.data();
+        const currentFractionsSold = data.fractionsSold || 0;
+        const currentTotalFractions = data.totalFractions || 1;
+
+        if (currentFractionsSold + amount > currentTotalFractions) {
+          throw new Error("No quedan suficientes fracciones disponibles en esta propiedad.");
+        }
+
+        // 1. Update property sold fractions count and total unique investor count
+        const prevInvestorsCount = data.investorsCount || 0;
+        transaction.update(propertyRef, {
+          fractionsSold: currentFractionsSold + amount,
+          investorsCount: prevInvestorsCount + 1,
+        });
+      });
+
+      // 2. Create investment document
+      const monthlyIncomeForFractions = ((property.monthlyIncomeEstimate || 0) / (property.totalFractions || 1)) * amount;
+      await addDoc(collection(db, "investments"), {
+        userId: currentUser.uid,
+        propertyId: property.id,
+        propertyName: property.name,
+        propertyImage: property.image || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+        location: property.location || "República Dominicana",
+        fractionsCount: amount,
+        investedAmount: subtotal,
+        monthlyIncomeEstimate: monthlyIncomeForFractions,
+        roiAnnual: property.roiAnnual || 0,
+        date: new Date().toISOString(),
+      });
+
+      // 3. Write transaction log
+      await addDoc(collection(db, "transactions"), {
+        userId: currentUser.uid,
+        investor: currentUser.name || currentUser.displayName || "Inversionista",
+        property: property.name,
+        type: "Inversión",
+        amount: total,
+        fee: fee,
+        method: method === "bank" ? "Transferencia" : method === "card" ? "Tarjeta" : "Wallet",
+        status: "Completada",
+        date: new Date().toISOString(),
+      });
+
+      // 4. Update user's aggregate portfolios stats
+      const currentInvested = currentUser.totalInvested || 0;
+      const currentProps = currentUser.propertiesCount || 0;
+      const currentIncome = currentUser.monthlyIncome || 0;
+
+      await updateDoc(userRef, {
+        totalInvested: currentInvested + subtotal,
+        propertiesCount: currentProps + 1,
+        monthlyIncome: currentIncome + monthlyIncomeForFractions,
+      });
+
+      setStep("success");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Error al procesar la inversión");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -86,10 +173,10 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                         </button>
                         <div className="text-center">
                           <p className="font-mono text-3xl">{amount}</p>
-                          <p className="text-[10px] text-muted-foreground">× ${property.pricePerFraction.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">× ${pricePerFraction.toLocaleString()}</p>
                         </div>
                         <button
-                          onClick={() => setAmount(Math.min(10, amount + 1))}
+                          onClick={() => setAmount(Math.min((property.totalFractions || 1) - (property.fractionsSold || 0), amount + 1))}
                           className="h-12 w-12 rounded-xl bg-gradient-gold text-primary-foreground grid place-items-center shadow-gold"
                         >
                           <Plus className="h-4 w-4" />
@@ -163,7 +250,7 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                         <Row label="Inversión" value={formatUSD(subtotal, { decimals: 0 })} />
                         <Row
                           label="Renta mensual est."
-                          value={`+${formatUSD((property.monthlyIncomeEstimate / property.totalFractions) * amount)}`}
+                          value={`+${formatUSD(((property.monthlyIncomeEstimate || 0) / (property.totalFractions || 1)) * amount)}`}
                           highlight
                         />
                         <Row label="Método" value={method === "bank" ? "Transferencia" : method === "card" ? "Tarjeta" : "Wallet"} />
@@ -176,12 +263,13 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                     </p>
 
                     <button
-                      onClick={() => setStep("success")}
-                      className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold"
+                      disabled={isSubmitting}
+                      onClick={handleConfirmInvestment}
+                      className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center"
                     >
-                      Confirmar inversión · {formatUSD(total, { decimals: 0 })}
+                      {isSubmitting ? "Procesando..." : `Confirmar inversión · ${formatUSD(total, { decimals: 0 })}`}
                     </button>
-                    <button onClick={onClose} className="h-12 w-full text-sm text-muted-foreground">
+                    <button onClick={onClose} disabled={isSubmitting} className="h-12 w-full text-sm text-muted-foreground">
                       Cancelar
                     </button>
                   </div>
@@ -194,17 +282,6 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                       <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-success to-secondary grid place-items-center shadow-glow">
                         <Check className="h-12 w-12 text-background" strokeWidth={3} />
                       </div>
-                      {[...Array(8)].map((_, i) => (
-                        <span
-                          key={i}
-                          className="absolute top-1/2 left-1/2 h-2 w-2 rounded-full"
-                          style={{
-                            background: i % 2 ? "hsl(38 60% 55%)" : "hsl(168 64% 50%)",
-                            animation: `confetti-pop 1s ease-out ${i * 0.05}s forwards`,
-                            transform: `rotate(${i * 45}deg) translateY(-30px)`,
-                          }}
-                        />
-                      ))}
                     </div>
                     <h3 className="font-display text-3xl mt-6">¡Inversión exitosa!</h3>
                     <p className="text-sm text-muted-foreground mt-2 text-balance">
@@ -213,7 +290,7 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                     </p>
                     <div className="glass rounded-2xl p-4 mt-6 text-sm">
                       <p className="text-muted-foreground text-xs">Primer pago estimado</p>
-                      <p className="font-mono mt-1">15 de Mayo, 2026</p>
+                      <p className="font-mono mt-1">15 de Junio, 2026</p>
                     </div>
                     <div className="mt-6 grid grid-cols-2 gap-3">
                       <button onClick={onClose} className="h-12 rounded-2xl glass text-sm">

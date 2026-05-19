@@ -1,18 +1,91 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ScreenHeader from "@/components/ScreenHeader";
 import EmptyState from "@/components/EmptyState";
-import { earningsHistory, myInvestments, portfolioStats, properties } from "@/lib/mockData";
 import { formatPct, formatUSD } from "@/lib/format";
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart } from "recharts";
+import { ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart, Line } from "recharts";
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
+import { useAppStore } from "@/store/useAppStore";
+import { collection, onSnapshot, query as fsQuery, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const ranges = ["3M", "6M", "1A"] as const;
 
 export default function Portafolio() {
+  const currentUser = useAppStore((s) => s.user);
   const [range, setRange] = useState<typeof ranges[number]>("6M");
-  const data =
-    range === "3M" ? earningsHistory.slice(-3) : range === "6M" ? earningsHistory.slice(-6) : earningsHistory;
+
+  const [investments, setInvestments] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 1. Subscribe to properties to get latest statuses and info
+    const unsubscribeProps = onSnapshot(collection(db, "properties"), (snapshot) => {
+      setProperties(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    if (!currentUser?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    // 2. Subscribe to user investments
+    const qInv = fsQuery(collection(db, "investments"), where("userId", "==", currentUser.uid));
+    const unsubscribeInv = onSnapshot(qInv, (snapshot) => {
+      setInvestments(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    // 3. Subscribe to user transactions
+    const qTx = fsQuery(collection(db, "transactions"), where("userId", "==", currentUser.uid));
+    const unsubscribeTx = onSnapshot(qTx, (snapshot) => {
+      setTransactions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeProps();
+      unsubscribeInv();
+      unsubscribeTx();
+    };
+  }, [currentUser?.uid]);
+
+  // Aggregate stats from real investments
+  const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
+  const monthlyIncome = investments.reduce((sum, inv) => sum + (inv.monthlyIncomeEstimate || 0), 0);
+  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12) / totalInvested : 0.125;
+
+  const distributions = transactions.filter(
+    (t) => t.type === "Distribución" && t.status === "Completada"
+  );
+
+  const totalEarned = distributions.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+  // Group distributions for chart
+  let chartData: { month: string; value: number }[] = [];
+  if (distributions.length > 0) {
+    const sorted = [...distributions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const grouped: { [key: string]: number } = {};
+    sorted.forEach((t) => {
+      const d = new Date(t.date);
+      const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+      const key = `${monthNames[d.getMonth()]}`;
+      grouped[key] = (grouped[key] || 0) + t.amount;
+    });
+    chartData = Object.entries(grouped).map(([month, value]) => ({ month, value }));
+  } else {
+    // Fallback/projection chart if no distributions paid yet
+    chartData = [
+      { month: "Mar", value: monthlyIncome * 0.8 },
+      { month: "Abr", value: monthlyIncome * 0.9 },
+      { month: "May", value: monthlyIncome },
+    ];
+  }
+
+  // Handle range slice
+  const filteredChartData =
+    range === "3M" ? chartData.slice(-3) : range === "6M" ? chartData.slice(-6) : chartData;
 
   return (
     <div className="pb-4">
@@ -23,21 +96,21 @@ export default function Portafolio() {
         <div className="glass-strong rounded-3xl p-6 grain-overlay relative overflow-hidden">
           <div className="absolute -top-20 -right-20 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Total invertido</p>
-          <p className="font-display text-5xl mt-2">{formatUSD(portfolioStats.totalInvested, { decimals: 0 })}</p>
+          <p className="font-display text-5xl mt-2">{formatUSD(totalInvested, { decimals: 0 })}</p>
           <div className="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-border">
-            <SmallStat label="Ganado" value={formatUSD(portfolioStats.totalEarned)} accent="success" />
-            <SmallStat label="ROI" value={formatPct(portfolioStats.roiAnnual)} accent="teal" />
-            <SmallStat label="Mes" value={`+${formatUSD(portfolioStats.monthlyIncome)}`} accent="success" />
+            <SmallStat label="Ganado" value={formatUSD(totalEarned)} accent="success" />
+            <SmallStat label="ROI" value={formatPct(roiAnnual)} accent="teal" />
+            <SmallStat label="Mes" value={`+${formatUSD(monthlyIncome)}`} accent="success" />
           </div>
         </div>
 
         {/* Chart */}
-        {data.length > 0 && (
+        {filteredChartData.length > 0 && (
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-xs text-muted-foreground">Ganancias mensuales</p>
-                <p className="font-mono text-lg">+{formatUSD(data.reduce((s, d) => s + d.value, 0))}</p>
+                <p className="font-mono text-lg">+{formatUSD(filteredChartData.reduce((s, d) => s + d.value, 0))}</p>
               </div>
               <div className="flex gap-1 p-1 rounded-full glass">
                 {ranges.map((r) => (
@@ -55,7 +128,7 @@ export default function Portafolio() {
             </div>
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 10, right: 6, bottom: 0, left: -20 }}>
+                <AreaChart data={filteredChartData} margin={{ top: 10, right: 6, bottom: 0, left: -20 }}>
                   <defs>
                     <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="hsl(38 60% 55%)" stopOpacity={0.5} />
@@ -96,29 +169,31 @@ export default function Portafolio() {
         {/* Investments */}
         <section>
           <h2 className="font-display text-2xl mb-3">Mis inversiones</h2>
-          {myInvestments.length > 0 ? (
+          {investments.length > 0 ? (
             <div className="space-y-3">
-              {myInvestments.map((inv) => {
+              {investments.map((inv) => {
                 const p = properties.find((pr) => pr.id === inv.propertyId);
-                if (!p) return null;
+                const name = p?.name || inv.propertyName;
+                const image = p?.image || inv.propertyImage;
+                const status = p?.status || "rentando";
                 return (
                   <Link
-                    key={inv.propertyId}
-                    to={`/app/propiedad/${p.id}`}
+                    key={inv.id}
+                    to={`/app/propiedad/${inv.propertyId}`}
                     className="block glass rounded-2xl p-3 flex items-center gap-3 active:scale-[0.99] transition"
                   >
-                    <img src={p.image} alt={p.name} className="h-16 w-16 rounded-xl object-cover" />
+                    <img src={image} alt={name} className="h-16 w-16 rounded-xl object-cover" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{p.name}</p>
+                      <p className="font-medium text-sm truncate">{name}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {inv.fractions} fracc. · {formatUSD(inv.invested, { decimals: 0 })}
+                        {inv.fractionsCount} fracc. · {formatUSD(inv.investedAmount, { decimals: 0 })}
                       </p>
-                      <span className="inline-block mt-1.5 text-[10px] text-secondary bg-secondary/15 px-2 py-0.5 rounded-full">
-                        {inv.status}
+                      <span className="inline-block mt-1.5 text-[10px] text-secondary bg-secondary/15 px-2 py-0.5 rounded-full capitalize">
+                        {status}
                       </span>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono text-sm text-success">+{formatUSD(inv.monthlyIncome)}</p>
+                      <p className="font-mono text-sm text-success">+{formatUSD(inv.monthlyIncomeEstimate)}</p>
                       <p className="text-[10px] text-muted-foreground">/ mes</p>
                     </div>
                   </Link>
@@ -131,25 +206,32 @@ export default function Portafolio() {
         </section>
 
         {/* Earnings history */}
-        {earningsHistory.length > 0 && (
+        {distributions.length > 0 ? (
           <section>
             <h2 className="font-display text-2xl mb-3">Historial de ganancias</h2>
             <div className="glass rounded-2xl divide-y divide-border">
-              {earningsHistory.slice().reverse().map((e, i) => (
+              {distributions.slice().reverse().map((e, i) => (
                 <div key={i} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-success/15 grid place-items-center">
                       <ArrowUpRight className="h-4 w-4 text-success" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">Renta {e.month} 2026</p>
-                      <p className="text-[11px] text-muted-foreground">{portfolioStats.propertiesCount} propiedades · Pagado</p>
+                      <p className="text-sm font-medium">Distribución - {e.property}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {e.date ? new Date(e.date).toLocaleDateString() : ""} · {e.status}
+                      </p>
                     </div>
                   </div>
-                  <p className="font-mono text-sm text-success">+{formatUSD(e.value)}</p>
+                  <p className="font-mono text-sm text-success">+{formatUSD(e.amount)}</p>
                 </div>
               ))}
             </div>
+          </section>
+        ) : (
+          <section>
+            <h2 className="font-display text-2xl mb-3">Historial de ganancias</h2>
+            <EmptyState subtitle="Tus distribuciones mensuales de alquiler aparecerán listadas aquí." />
           </section>
         )}
       </div>

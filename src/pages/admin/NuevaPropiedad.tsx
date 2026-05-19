@@ -5,6 +5,8 @@ import PageHeader from "@/components/admin/PageHeader";
 import StatusPill from "@/components/admin/StatusPill";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const STEPS = [
   { id: 1, label: "Información básica" },
@@ -78,9 +80,47 @@ export default function NuevaPropiedad() {
     setStep((s) => Math.min(4, s + 1));
   };
 
-  const submit = () => {
-    setSubmitted(true);
-    toast.success("Propiedad publicada", { description: `${name} ya está visible para los inversores.` });
+  const submit = async () => {
+    try {
+      const defaultGallery = [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80",
+      ];
+
+      const newProperty = {
+        name,
+        developer: {
+          name: developer,
+          verified: true,
+          projects: 3,
+        },
+        description,
+        type,
+        location: `${sector || "Sin sector"}, ${province}`,
+        totalPrice,
+        totalFractions: fractions,
+        fractionsSold: 0,
+        pricePerFraction: fractionPrice,
+        roiAnnual: roi,
+        monthlyIncomeEstimate: monthlyRent,
+        image: defaultGallery[0],
+        gallery: defaultGallery,
+        amenities: ["Piscina", "Gimnasio", "Seguridad 24/7", "Vista al mar"],
+        status: "disponible",
+        daysLeft: 30,
+        investorsCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, "properties"), newProperty);
+      setSubmitted(true);
+      toast.success("Propiedad publicada", { description: `${name} ya está visible para los inversores.` });
+    } catch (err: any) {
+      console.error("Error creating property:", err);
+      toast.error("Error al publicar la propiedad");
+    }
   };
 
   if (submitted) {

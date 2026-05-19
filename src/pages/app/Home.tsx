@@ -1,21 +1,73 @@
+import { useState, useEffect } from "react";
 import ScreenHeader from "@/components/ScreenHeader";
 import PropertyCard from "@/components/PropertyCard";
 import EmptyState from "@/components/EmptyState";
-import {
-  properties,
-  portfolioStats,
-  activityFeed,
-} from "@/lib/mockData";
 import { formatPct, formatUSD } from "@/lib/format";
 import { ArrowUpRight, Home as HomeIcon, Plus, Sparkles, TrendingUp, AlertCircle, ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/store/useAppStore";
+import { collection, onSnapshot, query as fsQuery, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function Home() {
   const currentUser = useAppStore((s) => s.user);
   const firstName = currentUser?.name?.split(" ")[0] || currentUser?.displayName?.split(" ")[0] || "Inversor";
   const kycStatus = currentUser?.kycStatus || "pending";
+
+  const [featuredProperties, setFeaturedProperties] = useState<any[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 1. Subscribe to featured properties
+    const qProps = fsQuery(collection(db, "properties"));
+    const unsubscribeProps = onSnapshot(qProps, (snapshot) => {
+      const data = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      // Filter out only available properties to highlight
+      setFeaturedProperties(data.filter((p) => p.status === "disponible" || p.status === "nuevo").slice(0, 3));
+    });
+
+    // 2. Subscribe to user transactions (sorted client-side to prevent index exceptions)
+    if (!currentUser?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    const qTxs = fsQuery(collection(db, "transactions"), where("userId", "==", currentUser.uid));
+    const unsubscribeTxs = onSnapshot(qTxs, (snapshot) => {
+      const data = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      // Sort client side by date descending
+      data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentTransactions(data);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeProps();
+      unsubscribeTxs();
+    };
+  }, [currentUser?.uid]);
+
+  // Aggregate stats from currentUser
+  const totalInvested = currentUser?.totalInvested || 0;
+  const propertiesCount = currentUser?.propertiesCount || 0;
+  const monthlyIncome = currentUser?.monthlyIncome || 0;
+  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12 / totalInvested) : 0.125; // 12.5% default mock
+
+  // Sum all completed distributions for total earned
+  const totalEarned = recentTransactions
+    .filter((t) => t.type === "Distribución" && t.status === "Completada")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+  // Next payment days count
+  const nextPaymentDays = 15;
 
   return (
     <div className="pb-4">
@@ -91,6 +143,7 @@ export default function Home() {
             </div>
           </motion.div>
         )}
+
         {/* Portfolio summary */}
         <motion.section
           initial={{ opacity: 0, y: 12 }}
@@ -105,19 +158,19 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Mi Portafolio</p>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary bg-secondary/10 border border-secondary/30 px-2 py-0.5 rounded-full">
-                <TrendingUp className="h-3 w-3" /> {formatPct(portfolioStats.roiAnnual)} anual
+                <TrendingUp className="h-3 w-3" /> {formatPct(roiAnnual)} anual
               </span>
             </div>
 
             <p className="font-display text-5xl mt-3 tracking-tight">
               <span className="font-mono text-[14px] align-top text-muted-foreground">USD </span>
-              {formatUSD(portfolioStats.totalInvested, { decimals: 2 })}
+              {formatUSD(totalInvested, { decimals: 2 })}
             </p>
 
             <div className="mt-4 flex items-center justify-between text-sm">
               <div className="flex items-center gap-1.5 text-success">
                 <ArrowUpRight className="h-4 w-4" />
-                <span className="font-mono">+{formatUSD(portfolioStats.monthlyIncome)} / mes</span>
+                <span className="font-mono">+{formatUSD(monthlyIncome)} / mes</span>
               </div>
               <Link to="/app/portafolio" className="text-xs text-primary">Ver detalle →</Link>
             </div>
@@ -126,9 +179,9 @@ export default function Home() {
 
         {/* Quick stats */}
         <section className="grid grid-cols-3 gap-2.5">
-          <Stat label="Propiedades" value={portfolioStats.propertiesCount.toString()} />
-          <Stat label="Próximo pago" value={`${portfolioStats.nextPaymentDays}d`} />
-          <Stat label="Total ganado" value={formatUSD(portfolioStats.totalEarned, { decimals: 0 })} />
+          <Stat label="Propiedades" value={propertiesCount.toString()} />
+          <Stat label="Próximo pago" value={`${nextPaymentDays}d`} />
+          <Stat label="Total ganado" value={formatUSD(totalEarned, { decimals: 0 })} />
         </section>
 
         {/* Featured properties */}
@@ -140,9 +193,9 @@ export default function Home() {
             </div>
             <Link to="/app/explorar" className="text-xs text-primary">Ver todas</Link>
           </div>
-          {properties.length > 0 ? (
+          {featuredProperties.length > 0 ? (
             <div className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar">
-              {properties.map((p) => (
+              {featuredProperties.map((p) => (
                 <PropertyCard key={p.id} property={p} variant="horizontal" />
               ))}
             </div>
@@ -154,43 +207,45 @@ export default function Home() {
         {/* Activity */}
         <section>
           <h2 className="font-display text-2xl mb-3">Actividad reciente</h2>
-          {activityFeed.length > 0 ? (
+          {recentTransactions.length > 0 ? (
             <div className="glass rounded-2xl divide-y divide-border">
-              {activityFeed.map((a) => (
+              {recentTransactions.slice(0, 5).map((a) => (
                 <div key={a.id} className="flex items-center gap-3 p-4">
                   <div
                     className={`h-10 w-10 rounded-xl grid place-items-center ${
-                      a.type === "payment"
+                      a.type === "payment" || a.type === "Distribución"
                         ? "bg-success/15 text-success"
-                        : a.type === "investment"
+                        : a.type === "Inversión"
                         ? "bg-primary/15 text-primary"
                         : "bg-secondary/15 text-secondary"
                     }`}
                   >
-                    {a.type === "payment" ? (
+                    {a.type === "payment" || a.type === "Distribución" ? (
                       <ArrowUpRight className="h-5 w-5" />
-                    ) : a.type === "investment" ? (
+                    ) : a.type === "Inversión" ? (
                       <Plus className="h-5 w-5" />
                     ) : (
                       <Sparkles className="h-5 w-5" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{a.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{a.subtitle}</p>
+                    <p className="text-sm font-medium truncate">{a.type === "Inversión" ? `Inversión en ${a.property}` : `Retorno de ${a.property}`}</p>
+                    <p className="text-xs text-muted-foreground truncate">{a.method || "Transferencia"}</p>
                   </div>
                   <div className="text-right">
                     {a.amount > 0 && (
                       <p
                         className={`font-mono text-sm ${
-                          a.type === "payment" ? "text-success" : "text-foreground"
+                          a.type === "Distribución" ? "text-success" : "text-foreground"
                         }`}
                       >
-                        {a.type === "payment" ? "+" : ""}
-                        {formatUSD(a.amount, { decimals: a.amount < 100 ? 2 : 0 })}
+                        {a.type === "Distribución" ? "+" : ""}
+                        {formatUSD(a.amount, { decimals: 0 })}
                       </p>
                     )}
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.date}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {a.date ? new Date(a.date).toLocaleDateString() : "—"}
+                    </p>
                   </div>
                 </div>
               ))}

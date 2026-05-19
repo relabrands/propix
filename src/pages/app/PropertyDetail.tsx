@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { properties, recentInvestors } from "@/lib/mockData";
+import { recentInvestors } from "@/lib/mockData";
 import ScreenHeader from "@/components/ScreenHeader";
 import ProgressBar from "@/components/ProgressBar";
 import EmptyState from "@/components/EmptyState";
@@ -9,16 +9,33 @@ import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users } from "lucide-
 import InvestSheet from "@/components/InvestSheet";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function PropertyDetail() {
   const { id } = useParams();
-  const property = properties.find((p) => p.id === id);
+  const [property, setProperty] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [imgIdx, setImgIdx] = useState(0);
   const [amount, setAmount] = useState(1);
   const [open, setOpen] = useState(false);
 
   const currentUser = useAppStore((s) => s.user);
   const kycStatus = currentUser?.kycStatus || "pending";
+
+  useEffect(() => {
+    if (!id) return;
+    const docRef = doc(db, "properties", id);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setProperty({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        setProperty(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [id]);
 
   const handleInvestClick = () => {
     if (kycStatus === "verified") {
@@ -31,8 +48,8 @@ export default function PropertyDetail() {
       return;
     }
 
-    // kycStatus === "pending" or not yet submitted/filled
-    const missingDocs = !currentUser?.cedulaUploaded || !currentUser?.selfieUploaded || !currentUser?.addressUploaded || !currentUser?.incomeUploaded;
+    // Check what profile/doc fields are missing to show context-sensitive error
+    const missingDocs = !currentUser?.cedulaUploaded && !currentUser?.selfieUploaded && !currentUser?.addressUploaded && !currentUser?.incomeUploaded;
     const missingProfile = !currentUser?.cedula || !currentUser?.nationality || !currentUser?.profession || !currentUser?.economicActivity || !currentUser?.fundsSource;
 
     if (missingProfile) {
@@ -54,6 +71,17 @@ export default function PropertyDetail() {
     toast.error("Debes completar tu perfil y subir tus documentos de identidad antes de poder invertir.");
   };
 
+  if (loading) {
+    return (
+      <div className="pb-8">
+        <ScreenHeader back title="Cargando..." />
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          Cargando detalles de la propiedad...
+        </div>
+      </div>
+    );
+  }
+
   if (!property) {
     return (
       <div className="pb-8">
@@ -73,9 +101,17 @@ export default function PropertyDetail() {
     );
   }
 
-  const pct = Math.round((property.fractionsSold / property.totalFractions) * 100);
-  const monthlyEst = (property.monthlyIncomeEstimate / property.totalFractions) * amount;
+  const pct = Math.round(((property.fractionsSold || 0) / (property.totalFractions || 1)) * 100);
+  const pricePerFraction = property.pricePerFraction || 0;
+  const totalFractions = property.totalFractions || 1;
+  const fractionsSold = property.fractionsSold || 0;
+  const totalPrice = property.totalPrice || 0;
+  const monthlyRent = property.monthlyIncomeEstimate || 0;
+
+  const monthlyEst = (monthlyRent / totalFractions) * amount;
   const annualEst = monthlyEst * 12;
+
+  const galleryList = property.gallery && property.gallery.length > 0 ? property.gallery : [property.image];
 
   return (
     <div className="pb-32">
@@ -94,14 +130,14 @@ export default function PropertyDetail() {
       <div className="relative -mt-[68px]">
         <div className="aspect-[4/3] overflow-hidden">
           <img
-            src={property.gallery[imgIdx]}
+            src={galleryList[imgIdx] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"}
             alt={property.name}
             className="h-full w-full object-cover transition-opacity duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
         </div>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {property.gallery.map((_, i) => (
+          {galleryList.map((_, i) => (
             <button
               key={i}
               onClick={() => setImgIdx(i)}
@@ -127,12 +163,12 @@ export default function PropertyDetail() {
 
         {/* Metrics 2x2 */}
         <div className="grid grid-cols-2 gap-3">
-          <Metric label="ROI Anual" value={formatPct(property.roiAnnual)} accent="teal" />
-          <Metric label="Renta mensual est." value={formatUSD(property.monthlyIncomeEstimate, { decimals: 0 })} />
-          <Metric label="Precio total" value={formatUSD(property.totalPrice, { decimals: 0 })} />
+          <Metric label="ROI Anual" value={formatPct(property.roiAnnual || 0)} accent="teal" />
+          <Metric label="Renta mensual est." value={formatUSD(monthlyRent, { decimals: 0 })} />
+          <Metric label="Precio total" value={formatUSD(totalPrice, { decimals: 0 })} />
           <Metric
             label="Fracciones disponibles"
-            value={`${property.totalFractions - property.fractionsSold}/${property.totalFractions}`}
+            value={`${totalFractions - fractionsSold}/${totalFractions}`}
           />
         </div>
 
@@ -141,13 +177,13 @@ export default function PropertyDetail() {
           <div className="flex items-center justify-between text-sm">
             <span className="font-mono">{pct}% financiado</span>
             <span className="text-muted-foreground text-xs">
-              {formatUSD(property.fractionsSold * property.pricePerFraction, { decimals: 0 })} / {formatUSD(property.totalPrice, { decimals: 0 })}
+              {formatUSD(fractionsSold * pricePerFraction, { decimals: 0 })} / {formatUSD(totalPrice, { decimals: 0 })}
             </span>
           </div>
           <ProgressBar value={pct} />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-primary" /> {property.investorsCount} inversores
+              <Users className="h-3.5 w-3.5 text-primary" /> {property.investorsCount || 0} inversores
             </span>
             {property.daysLeft > 0 && (
               <span className="inline-flex items-center gap-1.5">
@@ -175,10 +211,10 @@ export default function PropertyDetail() {
               </button>
               <div className="text-center">
                 <p className="font-mono text-2xl">{amount}</p>
-                <p className="text-[10px] text-muted-foreground">{formatUSD(amount * property.pricePerFraction, { decimals: 0 })} USD</p>
+                <p className="text-[10px] text-muted-foreground">{formatUSD(amount * pricePerFraction, { decimals: 0 })} USD</p>
               </div>
               <button
-                onClick={() => setAmount(Math.min(10, amount + 1))}
+                onClick={() => setAmount(Math.min(totalFractions - fractionsSold, amount + 1))}
                 className="h-11 w-11 rounded-xl bg-gradient-gold text-primary-foreground grid place-items-center active:scale-95 transition shadow-gold"
               >
                 <Plus className="h-4 w-4" />
@@ -187,7 +223,7 @@ export default function PropertyDetail() {
             <input
               type="range"
               min={1}
-              max={10}
+              max={Math.max(1, totalFractions - fractionsSold)}
               step={1}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
@@ -203,19 +239,21 @@ export default function PropertyDetail() {
         </div>
 
         {/* Amenities */}
-        <div>
-          <h3 className="font-display text-2xl mb-3">Amenidades</h3>
-          <div className="flex flex-wrap gap-2">
-            {property.amenities.map((a) => (
-              <span
-                key={a}
-                className="text-xs px-3 py-1.5 rounded-full glass"
-              >
-                {a}
-              </span>
-            ))}
+        {property.amenities && property.amenities.length > 0 && (
+          <div>
+            <h3 className="font-display text-2xl mb-3">Amenidades</h3>
+            <div className="flex flex-wrap gap-2">
+              {property.amenities.map((a: string) => (
+                <span
+                  key={a}
+                  className="text-xs px-3 py-1.5 rounded-full glass"
+                >
+                  {a}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Map placeholder */}
         <div className="aspect-[16/9] rounded-2xl glass overflow-hidden relative grid place-items-center">
@@ -227,11 +265,13 @@ export default function PropertyDetail() {
         </div>
 
         {/* Developer — informational trust badge */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-          <Building2 className="h-3.5 w-3.5 text-primary" />
-          <span>Desarrollado por</span>
-          <span className="text-foreground font-medium">{property.developer.name}</span>
-        </div>
+        {property.developer && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+            <Building2 className="h-3.5 w-3.5 text-primary" />
+            <span>Desarrollado por</span>
+            <span className="text-foreground font-medium">{property.developer.name}</span>
+          </div>
+        )}
 
         {/* Recent investors */}
         {recentInvestors.length > 0 && (
@@ -258,16 +298,29 @@ export default function PropertyDetail() {
       </div>
 
       {/* Sticky CTA */}
-      <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
-        <div className="mx-auto max-w-md px-5 pb-3 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent">
-          <button
-            onClick={handleInvestClick}
-            className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
-          >
-            Invertir {formatUSD(amount * property.pricePerFraction, { decimals: 0 })}
-          </button>
+      {fractionsSold < totalFractions ? (
+        <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
+          <div className="mx-auto max-w-md px-5 pb-3 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent">
+            <button
+              onClick={handleInvestClick}
+              className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+            >
+              Invertir {formatUSD(amount * pricePerFraction, { decimals: 0 })}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
+          <div className="mx-auto max-w-md px-5 pb-3 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent">
+            <button
+              disabled
+              className="h-14 w-full rounded-2xl bg-muted text-muted-foreground font-semibold flex items-center justify-center gap-2"
+            >
+              Fondeo Completado
+            </button>
+          </div>
+        </div>
+      )}
 
       <InvestSheet
         open={open}
