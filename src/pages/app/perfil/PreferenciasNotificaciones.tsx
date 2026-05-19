@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ScreenHeader from "@/components/ScreenHeader";
 import { toast } from "sonner";
+import { useAppStore } from "@/store/useAppStore";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 const groups = [
   {
@@ -28,11 +31,35 @@ const groups = [
 ];
 
 export default function PreferenciasNotificaciones() {
+  const currentUser = useAppStore((s) => s.user);
+  const [saving, setSaving] = useState(false);
   const [state, setState] = useState<Record<string, { push: boolean; email: boolean }>>(() =>
     Object.fromEntries(groups.flatMap((g) => g.items.map((i) => [i.id, { push: true, email: i.id !== "promos" }])))
   );
 
-  const save = () => toast.success("Preferencias guardadas");
+  useEffect(() => {
+    if (currentUser?.notifications) {
+      setState(currentUser.notifications);
+    }
+  }, [currentUser]);
+
+  const save = async () => {
+    if (!currentUser?.uid) {
+      toast.error("Sesión no válida");
+      return;
+    }
+    setSaving(true);
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), {
+        notifications: state
+      }, { merge: true });
+      toast.success("Preferencias guardadas");
+    } catch (err) {
+      toast.error("Error al guardar preferencias");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="pb-10">
@@ -48,14 +75,14 @@ export default function PreferenciasNotificaciones() {
                   <p className="text-[11px] text-muted-foreground">{it.desc}</p>
                   <div className="flex gap-2 mt-3">
                     <Pill
-                      active={state[it.id].push}
-                      onClick={() => setState({ ...state, [it.id]: { ...state[it.id], push: !state[it.id].push } })}
+                      active={state[it.id]?.push ?? true}
+                      onClick={() => setState({ ...state, [it.id]: { push: !(state[it.id]?.push ?? true), email: state[it.id]?.email ?? true } })}
                     >
                       Push
                     </Pill>
                     <Pill
-                      active={state[it.id].email}
-                      onClick={() => setState({ ...state, [it.id]: { ...state[it.id], email: !state[it.id].email } })}
+                      active={state[it.id]?.email ?? (it.id !== "promos")}
+                      onClick={() => setState({ ...state, [it.id]: { push: state[it.id]?.push ?? true, email: !(state[it.id]?.email ?? (it.id !== "promos")) } })}
                     >
                       Email
                     </Pill>
@@ -65,8 +92,8 @@ export default function PreferenciasNotificaciones() {
             </div>
           </div>
         ))}
-        <button onClick={save} className="w-full h-12 rounded-2xl bg-gradient-gold text-primary-foreground text-sm font-semibold shadow-gold">
-          Guardar preferencias
+        <button onClick={save} disabled={saving} className="w-full h-12 rounded-2xl bg-gradient-gold text-primary-foreground text-sm font-semibold shadow-gold disabled:opacity-50">
+          {saving ? "Guardando..." : "Guardar preferencias"}
         </button>
       </div>
     </div>

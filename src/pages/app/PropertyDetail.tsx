@@ -7,6 +7,8 @@ import EmptyState from "@/components/EmptyState";
 import { formatPct, formatUSD } from "@/lib/format";
 import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users } from "lucide-react";
 import InvestSheet from "@/components/InvestSheet";
+import { useAppStore } from "@/store/useAppStore";
+import { toast } from "sonner";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -14,6 +16,43 @@ export default function PropertyDetail() {
   const [imgIdx, setImgIdx] = useState(0);
   const [amount, setAmount] = useState(1);
   const [open, setOpen] = useState(false);
+
+  const currentUser = useAppStore((s) => s.user);
+  const kycStatus = currentUser?.kycStatus || "pending";
+
+  const handleInvestClick = () => {
+    if (kycStatus === "verified") {
+      setOpen(true);
+      return;
+    }
+
+    if (kycStatus === "submitted" || kycStatus === "inReview") {
+      toast.error("Tu verificación KYC está en proceso. Te notificaremos cuando tu perfil haya sido aprobado.");
+      return;
+    }
+
+    // kycStatus === "pending" or not yet submitted/filled
+    const missingDocs = !currentUser?.cedulaUploaded || !currentUser?.selfieUploaded || !currentUser?.addressUploaded || !currentUser?.incomeUploaded;
+    const missingProfile = !currentUser?.cedula || !currentUser?.nationality || !currentUser?.profession || !currentUser?.economicActivity || !currentUser?.fundsSource;
+
+    if (missingProfile) {
+      toast.error("Por favor completa tu Información Personal en tu Perfil para poder invertir.", {
+        description: "Haz clic en Perfil -> Información Personal.",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (missingDocs) {
+      toast.error("Por favor completa la subida de tus Documentos KYC en tu Perfil para poder invertir.", {
+        description: "Haz clic en Perfil -> Documentos KYC.",
+        duration: 5000,
+      });
+      return;
+    }
+
+    toast.error("Debes completar tu perfil y subir tus documentos de identidad antes de poder invertir.");
+  };
 
   if (!property) {
     return (
@@ -222,7 +261,7 @@ export default function PropertyDetail() {
       <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
         <div className="mx-auto max-w-md px-5 pb-3 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent">
           <button
-            onClick={() => setOpen(true)}
+            onClick={handleInvestClick}
             className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
           >
             Invertir {formatUSD(amount * property.pricePerFraction, { decimals: 0 })}

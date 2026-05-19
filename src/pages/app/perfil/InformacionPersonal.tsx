@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import ScreenHeader from "@/components/ScreenHeader";
-import { user } from "@/lib/mockData";
 import { Save, Info } from "lucide-react";
+import { useAppStore } from "@/store/useAppStore";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const PROVINCIAS_RD = [
   "Distrito Nacional", "Santo Domingo", "Santiago", "La Vega", "San Cristóbal",
@@ -14,34 +16,35 @@ const PROVINCIAS_RD = [
 ];
 
 export default function InformacionPersonal() {
+  const currentUser = useAppStore((s) => s.user);
   const [form, setForm] = useState({
     // Identidad
-    firstName: user.name.split(" ")[0] ?? "",
-    lastName: user.name.split(" ").slice(1).join(" ") ?? "",
-    cedula: "001-1234567-8",
+    firstName: "",
+    lastName: "",
+    cedula: "",
     documentType: "cedula", // cedula | pasaporte
     nationality: "Dominicana",
-    birthdate: "1990-05-12",
-    birthPlace: "Santo Domingo, RD",
+    birthdate: "",
+    birthPlace: "",
     gender: "M",
     civilStatus: "soltero",
     // Contacto
-    email: user.email,
-    phone: "+1 809 555 0142",
+    email: "",
+    phone: "",
     // Domicilio (RD)
-    street: "Av. Anacaona",
-    houseNumber: "27",
-    sector: "Bella Vista",
+    street: "",
+    houseNumber: "",
+    sector: "",
     province: "Distrito Nacional",
-    municipality: "Santo Domingo de Guzmán",
-    postalCode: "10101",
+    municipality: "",
+    postalCode: "",
     // Económico / KYC
-    profession: "Ingeniero de software",
-    employer: "Independiente",
-    economicActivity: "servicios_profesionales",
-    monthlyIncome: "150000",
+    profession: "",
+    employer: "",
+    economicActivity: "empleado_privado",
+    monthlyIncome: "75000",
     fundsSource: "salario",
-    investmentExperience: "intermedio",
+    investmentExperience: "principiante",
     investmentPurpose: "ingresos_pasivos",
     rnc: "",
     // PEP / Compliance
@@ -52,27 +55,87 @@ export default function InformacionPersonal() {
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (currentUser) {
+      setForm((prev) => ({
+        ...prev,
+        firstName: currentUser.firstName || currentUser.name?.split(" ")[0] || currentUser.displayName?.split(" ")[0] || "",
+        lastName: currentUser.lastName || currentUser.name?.split(" ").slice(1).join(" ") || currentUser.displayName?.split(" ").slice(1).join(" ") || "",
+        cedula: currentUser.cedula || "",
+        documentType: currentUser.documentType || "cedula",
+        nationality: currentUser.nationality || "Dominicana",
+        birthdate: currentUser.birthdate || "",
+        birthPlace: currentUser.birthPlace || "",
+        gender: currentUser.gender || "M",
+        civilStatus: currentUser.civilStatus || "soltero",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        street: currentUser.street || "",
+        houseNumber: currentUser.houseNumber || "",
+        sector: currentUser.sector || "",
+        province: currentUser.province || "Distrito Nacional",
+        municipality: currentUser.municipality || "",
+        postalCode: currentUser.postalCode || "",
+        profession: currentUser.profession || "",
+        employer: currentUser.employer || "",
+        economicActivity: currentUser.economicActivity || "empleado_privado",
+        monthlyIncome: currentUser.monthlyIncome || "75000",
+        fundsSource: currentUser.fundsSource || "salario",
+        investmentExperience: currentUser.investmentExperience || "principiante",
+        investmentPurpose: currentUser.investmentPurpose || "ingresos_pasivos",
+        rnc: currentUser.rnc || "",
+        isPep: currentUser.isPep || "no",
+        pepRelation: currentUser.pepRelation || "no",
+        usPerson: currentUser.usPerson || "no",
+        tin: currentUser.tin || "",
+      }));
+    }
+  }, [currentUser]);
+
   const update = (k: keyof typeof form, v: string) => setForm({ ...form, [k]: v });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.firstName.trim() || !form.lastName.trim()) {
-      toast.error("Nombre y apellidos son requeridos");
-      return;
+    if (!form.firstName.trim()) return toast.error("El nombre es requerido");
+    if (!form.lastName.trim()) return toast.error("El apellido es requerido");
+    if (!form.cedula.trim()) return toast.error("El número de documento es requerido");
+    if (!form.birthdate) return toast.error("La fecha de nacimiento es requerida");
+    if (!form.birthPlace.trim()) return toast.error("El lugar de nacimiento es requerido");
+    if (!form.email.trim() || !form.email.includes("@")) return toast.error("El correo electrónico es requerido");
+    if (!form.phone.trim()) return toast.error("El teléfono es requerido");
+    if (!form.street.trim()) return toast.error("La calle es requerida");
+    if (!form.houseNumber.trim()) return toast.error("El número de casa/apto es requerido");
+    if (!form.sector.trim()) return toast.error("El sector es requerido");
+    if (!form.municipality.trim()) return toast.error("El municipio es requerido");
+    if (!form.profession.trim()) return toast.error("La profesión/ocupación es requerida");
+
+    if (form.documentType === "cedula" && !/^\d{3}-?\d{7}-?\d$/.test(form.cedula.replace(/[-\s]/g, ""))) {
+      return toast.error("Cédula RD inválida (formato 000-0000000-0)");
     }
-    if (!form.email.includes("@")) {
-      toast.error("Correo inválido");
-      return;
+
+    if (form.usPerson === "si" && !form.tin.trim()) {
+      return toast.error("El TIN/SSN es requerido para personas de EE.UU.");
     }
-    if (form.documentType === "cedula" && !/^\d{3}-?\d{7}-?\d$/.test(form.cedula.replace(/\s/g, ""))) {
-      toast.error("Cédula RD inválida (formato 000-0000000-0)");
-      return;
-    }
+
     setSaving(true);
-    setTimeout(() => {
+    if (currentUser?.uid) {
+      try {
+        await setDoc(doc(db, "users", currentUser.uid), {
+          ...form,
+          name: `${form.firstName} ${form.lastName}`,
+          profileCompleted: true
+        }, { merge: true });
+        toast.success("Información personal actualizada con éxito");
+      } catch (err: any) {
+        toast.error("Error al actualizar la información");
+        console.error(err);
+      } finally {
+        setSaving(false);
+      }
+    } else {
       setSaving(false);
-      toast.success("Información actualizada");
-    }, 700);
+      toast.error("Sesión no válida");
+    }
   };
 
   return (

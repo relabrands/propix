@@ -36,14 +36,42 @@ export default function Home() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-amber-500">Verificación requerida</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Completa tu perfil y sube tu documento de identidad para comenzar a realizar inversiones.
+                Para poder invertir, debes completar tu perfil. Aún tienes los siguientes pasos pendientes:
               </p>
-              <Link
-                to="/app/perfil/kyc"
-                className="inline-flex items-center gap-1 text-xs text-amber-500 font-semibold mt-2 hover:underline"
-              >
-                Completar KYC <ArrowRight className="h-3 w-3" />
-              </Link>
+              <div className="flex flex-col gap-1.5 mt-2">
+                {(!currentUser?.cedula || !currentUser?.nationality || !currentUser?.profession || !currentUser?.economicActivity || !currentUser?.fundsSource) && (
+                  <Link
+                    to="/app/perfil/informacion"
+                    className="inline-flex items-center gap-1 text-xs text-amber-500 font-semibold hover:underline"
+                  >
+                    • Completar Información Personal <ArrowRight className="h-3 w-3 animate-pulse" />
+                  </Link>
+                )}
+                {(!currentUser?.cedulaUploaded || !currentUser?.selfieUploaded || !currentUser?.addressUploaded || !currentUser?.incomeUploaded) && (
+                  <Link
+                    to="/app/perfil/kyc"
+                    className="inline-flex items-center gap-1 text-xs text-amber-500 font-semibold hover:underline"
+                  >
+                    • Subir Documentos de Identidad KYC <ArrowRight className="h-3 w-3 animate-pulse" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {kycStatus === "inReview" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3 shadow-sm"
+          >
+            <Clock className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-blue-500">Verificación en revisión</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Tus datos y documentos están siendo verificados por nuestro equipo de cumplimiento. Te avisaremos pronto.
+              </p>
             </div>
           </motion.div>
         )}
@@ -56,9 +84,9 @@ export default function Home() {
           >
             <Clock className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-blue-500">Verificación en proceso</p>
+              <p className="text-sm font-semibold text-blue-500">Verificación enviada</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Estamos validando tus documentos de identidad. Te notificaremos cuando tu cuenta sea aprobada para invertir.
+                Hemos recibido tu solicitud de verificación. Un administrador revisará tus documentos en breve.
               </p>
             </div>
           </motion.div>

@@ -25,18 +25,19 @@ export default function DocumentosKYC() {
   const currentUser = useAppStore((s) => s.user);
   const kycStatus = currentUser?.kycStatus || "pending";
 
-  const [cedulaUploaded, setCedulaUploaded] = useState(kycStatus !== "pending");
-  const [selfieUploaded, setSelfieUploaded] = useState(kycStatus !== "pending");
+  const [cedulaUploaded, setCedulaUploaded] = useState(false);
+  const [selfieUploaded, setSelfieUploaded] = useState(false);
+  const [addressUploaded, setAddressUploaded] = useState(false);
+  const [incomeUploaded, setIncomeUploaded] = useState(false);
 
   useEffect(() => {
-    if (kycStatus !== "pending") {
-      setCedulaUploaded(true);
-      setSelfieUploaded(true);
-    } else {
-      setCedulaUploaded(false);
-      setSelfieUploaded(false);
+    if (currentUser) {
+      setCedulaUploaded(!!currentUser.cedulaUploaded || kycStatus !== "pending");
+      setSelfieUploaded(!!currentUser.selfieUploaded || kycStatus !== "pending");
+      setAddressUploaded(!!currentUser.addressUploaded);
+      setIncomeUploaded(!!currentUser.incomeUploaded);
     }
-  }, [kycStatus]);
+  }, [currentUser, kycStatus]);
 
   const getRequiredDocStatus = (uploaded: boolean) => {
     if (kycStatus === "verified") return "verified";
@@ -69,40 +70,74 @@ export default function DocumentosKYC() {
       date: getRequiredDocDate(selfieUploaded),
       required: true
     },
-    { id: "address", label: "Comprobante de dirección", hint: "Factura EDE/CAASD/telefonía no mayor a 3 meses", icon: FileCheck2, status: kycStatus === "verified" ? "verified" : "pending", date: "—", required: true },
-    { id: "income", label: "Comprobante de ingresos", hint: "Carta de trabajo, últimos 3 estados de cuenta o IR-1/IR-2", icon: Receipt, status: kycStatus === "verified" ? "verified" : "pending", date: "—", required: true },
+    {
+      id: "address",
+      label: "Comprobante de dirección",
+      hint: "Factura EDE/CAASD/telefonía no mayor a 3 meses",
+      icon: FileCheck2,
+      status: kycStatus === "verified" ? "verified" : addressUploaded ? "review" : "pending",
+      date: addressUploaded ? "Subido hoy" : "—",
+      required: true
+    },
+    {
+      id: "income",
+      label: "Comprobante de ingresos",
+      hint: "Carta de trabajo, últimos 3 estados de cuenta o IR-1/IR-2",
+      icon: Receipt,
+      status: kycStatus === "verified" ? "verified" : incomeUploaded ? "review" : "pending",
+      date: incomeUploaded ? "Subido hoy" : "—",
+      required: true
+    },
     { id: "bank", label: "Certificación bancaria", hint: "Requerido para inversiones > US$10,000", icon: Landmark, status: "pending", date: "—" },
     { id: "rnc", label: "Constancia de RNC", hint: "Solo si invertirás como persona jurídica", icon: FileSignature, status: "pending", date: "—" },
-    { id: "pep", label: "Declaración PEP / fuente de fondos", hint: "Origen lícito de los recursos (Ley 155-17)", icon: ShieldAlert, status: "review", date: "Subido 20 abr 2026" },
+    { id: "pep", label: "Declaración PEP / fuente de fondos", hint: "Origen lícito de los recursos (Ley 155-17)", icon: ShieldAlert, status: "review", date: "Subido" },
   ];
 
   const handleUpload = async (id: string) => {
-    let nextCedula = cedulaUploaded;
-    let nextSelfie = selfieUploaded;
+    if (!currentUser?.uid) {
+      toast.error("Sesión inválida");
+      return;
+    }
 
+    let updates: any = {};
     if (id === "cedula") {
-      nextCedula = true;
+      updates.cedulaUploaded = true;
       setCedulaUploaded(true);
       toast.success("Cédula subida con éxito.");
     } else if (id === "selfie") {
-      nextSelfie = true;
+      updates.selfieUploaded = true;
       setSelfieUploaded(true);
       toast.success("Selfie subida con éxito.");
+    } else if (id === "address") {
+      updates.addressUploaded = true;
+      setAddressUploaded(true);
+      toast.success("Comprobante de dirección subido con éxito.");
+    } else if (id === "income") {
+      updates.incomeUploaded = true;
+      setIncomeUploaded(true);
+      toast.success("Comprobante de ingresos subido con éxito.");
     } else {
       toast.success("Documento enviado a revisión");
       return;
     }
 
-    if (nextCedula && nextSelfie && kycStatus === "pending" && currentUser?.uid) {
-      try {
-        await setDoc(doc(db, "users", currentUser.uid), {
-          kycStatus: "submitted",
-          documentsUploaded: true
-        }, { merge: true });
+    try {
+      const isCed = id === "cedula" ? true : cedulaUploaded;
+      const isSel = id === "selfie" ? true : selfieUploaded;
+      const isAddress = id === "address" ? true : addressUploaded;
+      const isIncome = id === "income" ? true : incomeUploaded;
+
+      // If all required items are uploaded, transition the status
+      if (isCed && isSel && isAddress && isIncome && kycStatus === "pending") {
+        updates.kycStatus = "submitted";
+        updates.documentsUploaded = true;
         toast.success("¡Documentos requeridos enviados! Verificación en proceso.");
-      } catch (err: any) {
-        toast.error("Error al guardar en el servidor");
       }
+
+      await setDoc(doc(db, "users", currentUser.uid), updates, { merge: true });
+    } catch (err: any) {
+      toast.error("Error al guardar en el servidor");
+      console.error(err);
     }
   };
 

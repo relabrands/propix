@@ -87,7 +87,9 @@ export default function Register() {
       try {
         await setDoc(doc(db, "users", auth.currentUser.uid), {
           kycStatus: "submitted",
-          documentsUploaded: true
+          documentsUploaded: true,
+          cedulaUploaded: true,
+          selfieUploaded: true
         }, { merge: true });
         
         toast.success("¡Documentos recibidos! Verificación en proceso.");
