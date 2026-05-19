@@ -5,22 +5,64 @@ import {
   properties,
   portfolioStats,
   activityFeed,
-  user,
 } from "@/lib/mockData";
 import { formatPct, formatUSD } from "@/lib/format";
-import { ArrowUpRight, Home as HomeIcon, Plus, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Home as HomeIcon, Plus, Sparkles, TrendingUp, AlertCircle, ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAppStore } from "@/store/useAppStore";
 
 export default function Home() {
+  const currentUser = useAppStore((s) => s.user);
+  const firstName = currentUser?.name?.split(" ")[0] || currentUser?.displayName?.split(" ")[0] || "Inversor";
+  const kycStatus = currentUser?.kycStatus || "pending";
+
   return (
     <div className="pb-4">
       <ScreenHeader
-        subtitle={`Hola, ${user.name.split(" ")[0]} 👋`}
+        subtitle={`Hola, ${firstName} 👋`}
         title="Buenas tardes"
       />
 
       <div className="px-5 space-y-6">
+        {/* Banner de KYC */}
+        {kycStatus === "pending" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 shadow-sm"
+          >
+            <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-500">Verificación requerida</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Completa tu perfil y sube tu documento de identidad para comenzar a realizar inversiones.
+              </p>
+              <Link
+                to="/app/perfil/kyc"
+                className="inline-flex items-center gap-1 text-xs text-amber-500 font-semibold mt-2 hover:underline"
+              >
+                Completar KYC <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </motion.div>
+        )}
+
+        {kycStatus === "submitted" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3 shadow-sm"
+          >
+            <Clock className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-blue-500">Verificación en proceso</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Estamos validando tus documentos de identidad. Te notificaremos cuando tu cuenta sea aprobada para invertir.
+              </p>
+            </div>
+          </motion.div>
+        )}
         {/* Portfolio summary */}
         <motion.section
           initial={{ opacity: 0, y: 12 }}

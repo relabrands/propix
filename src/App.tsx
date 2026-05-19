@@ -38,7 +38,8 @@ import AdminNotificaciones from "./pages/admin/Notificaciones";
 
 import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { useAppStore } from "@/store/useAppStore";
 
 const queryClient = new QueryClient();
@@ -48,17 +49,46 @@ const App = () => {
   const setUser = useAppStore((s) => s.setUser);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    let unsubscribeFirestore: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthed(true);
-        setUser(user);
+        setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+        });
+
+        // Listen to real-time changes in the Firestore user profile
+        unsubscribeFirestore = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            setUser({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              ...docSnap.data()
+            });
+          }
+        }, (error) => {
+          console.error("Error fetching user profile:", error);
+        });
       } else {
         setAuthed(false);
         setUser(null);
+        if (unsubscribeFirestore) {
+          unsubscribeFirestore();
+          unsubscribeFirestore = null;
+        }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+    };
   }, [setAuthed, setUser]);
 
   return (

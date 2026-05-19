@@ -15,6 +15,8 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [cedulaUploaded, setCedulaUploaded] = useState(false);
+  const [selfieUploaded, setSelfieUploaded] = useState(false);
   const navigate = useNavigate();
   const setAuthed = useAppStore((s) => s.setAuthed);
   const setUser = useAppStore((s) => s.setUser);
@@ -77,20 +79,33 @@ export default function Register() {
   };
 
   const handleFinish = async () => {
+    if (!cedulaUploaded || !selfieUploaded) {
+      return toast.error("Por favor, sube ambos documentos para verificar tu identidad.");
+    }
     if (auth.currentUser) {
+      setLoading(true);
       try {
         await setDoc(doc(db, "users", auth.currentUser.uid), {
           kycStatus: "submitted",
           documentsUploaded: true
         }, { merge: true });
         
-        toast.success("¡Cuenta creada! Verificación pendiente.");
+        toast.success("¡Documentos recibidos! Verificación en proceso.");
         setAuthed(true);
-        setUser(auth.currentUser);
         navigate("/app");
       } catch (err: any) {
         toast.error("Error al guardar información");
+      } finally {
+        setLoading(false);
       }
+    }
+  };
+
+  const handleSkip = () => {
+    if (auth.currentUser) {
+      toast.info("Registro completado. Recuerda verificar tu identidad más tarde.");
+      setAuthed(true);
+      navigate("/app");
     }
   };
 
@@ -159,8 +174,20 @@ export default function Register() {
           </p>
 
           <div className="mt-6 space-y-3">
-            <UploadTile icon={<Upload className="h-5 w-5" />} title="Sube tu cédula o pasaporte" desc="Frente y reverso · JPG o PDF" />
-            <UploadTile icon={<Camera className="h-5 w-5" />} title="Toma una selfie" desc="Para verificación facial" />
+            <UploadTile
+              icon={<Upload className="h-5 w-5" />}
+              title="Sube tu cédula o pasaporte"
+              desc="Frente y reverso · JPG o PDF"
+              done={cedulaUploaded}
+              onChange={setCedulaUploaded}
+            />
+            <UploadTile
+              icon={<Camera className="h-5 w-5" />}
+              title="Toma una selfie"
+              desc="Para verificación facial"
+              done={selfieUploaded}
+              onChange={setSelfieUploaded}
+            />
           </div>
 
           <div className="mt-5 glass rounded-2xl p-4 flex items-center gap-3">
@@ -173,12 +200,22 @@ export default function Register() {
             </div>
           </div>
 
-          <button
-            onClick={handleFinish}
-            className="mt-auto h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold"
-          >
-            Finalizar registro
-          </button>
+          <div className="mt-auto pt-6 space-y-3">
+            <button
+              onClick={handleFinish}
+              disabled={loading || !cedulaUploaded || !selfieUploaded}
+              className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold transition-transform active:scale-[0.98] disabled:opacity-50"
+            >
+              {loading ? "Cargando..." : "Finalizar y verificar"}
+            </button>
+            
+            <button
+              onClick={handleSkip}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
+            >
+              Omitir verificación por ahora
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -194,11 +231,23 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
-function UploadTile({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  const [done, setDone] = useState(false);
+function UploadTile({
+  icon,
+  title,
+  desc,
+  done,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  done: boolean;
+  onChange: (done: boolean) => void;
+}) {
   return (
     <button
-      onClick={() => setDone(true)}
+      onClick={() => onChange(!done)}
+      type="button"
       className="w-full glass rounded-2xl p-4 flex items-center gap-4 text-left transition-transform active:scale-[0.99]"
     >
       <div
