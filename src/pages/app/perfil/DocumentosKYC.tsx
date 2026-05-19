@@ -29,6 +29,9 @@ export default function DocumentosKYC() {
   const [selfieUploaded, setSelfieUploaded] = useState(false);
   const [addressUploaded, setAddressUploaded] = useState(false);
   const [incomeUploaded, setIncomeUploaded] = useState(false);
+  const [bankUploaded, setBankUploaded] = useState(false);
+  const [rncUploaded, setRncUploaded] = useState(false);
+  const [pepUploaded, setPepUploaded] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -36,6 +39,9 @@ export default function DocumentosKYC() {
       setSelfieUploaded(!!currentUser.selfieUploaded || kycStatus !== "pending");
       setAddressUploaded(!!currentUser.addressUploaded);
       setIncomeUploaded(!!currentUser.incomeUploaded);
+      setBankUploaded(!!currentUser.bankUploaded);
+      setRncUploaded(!!currentUser.rncUploaded);
+      setPepUploaded(!!currentUser.pepUploaded);
     }
   }, [currentUser, kycStatus]);
 
@@ -88,9 +94,30 @@ export default function DocumentosKYC() {
       date: incomeUploaded ? "Subido hoy" : "—",
       required: true
     },
-    { id: "bank", label: "Certificación bancaria", hint: "Requerido para inversiones > US$10,000", icon: Landmark, status: "pending", date: "—" },
-    { id: "rnc", label: "Constancia de RNC", hint: "Solo si invertirás como persona jurídica", icon: FileSignature, status: "pending", date: "—" },
-    { id: "pep", label: "Declaración PEP / fuente de fondos", hint: "Origen lícito de los recursos (Ley 155-17)", icon: ShieldAlert, status: "review", date: "Subido" },
+    { 
+      id: "bank", 
+      label: "Certificación bancaria", 
+      hint: "Requerido para inversiones > US$10,000", 
+      icon: Landmark, 
+      status: kycStatus === "verified" ? "verified" : bankUploaded ? "review" : "pending", 
+      date: bankUploaded ? "Subido hoy" : "—" 
+    },
+    { 
+      id: "rnc", 
+      label: "Constancia de RNC", 
+      hint: "Solo si invertirás como persona jurídica", 
+      icon: FileSignature, 
+      status: kycStatus === "verified" ? "verified" : rncUploaded ? "review" : "pending", 
+      date: rncUploaded ? "Subido hoy" : "—" 
+    },
+    { 
+      id: "pep", 
+      label: "Declaración PEP / fuente de fondos", 
+      hint: "Origen lícito de los recursos (Ley 155-17)", 
+      icon: ShieldAlert, 
+      status: kycStatus === "verified" ? "verified" : pepUploaded ? "review" : "pending", 
+      date: pepUploaded ? "Subido hoy" : "—" 
+    },
   ];
 
   const handleUpload = async (id: string) => {
@@ -116,6 +143,18 @@ export default function DocumentosKYC() {
       updates.incomeUploaded = true;
       setIncomeUploaded(true);
       toast.success("Comprobante de ingresos subido con éxito.");
+    } else if (id === "bank") {
+      updates.bankUploaded = true;
+      setBankUploaded(true);
+      toast.success("Certificación bancaria subida con éxito.");
+    } else if (id === "rnc") {
+      updates.rncUploaded = true;
+      setRncUploaded(true);
+      toast.success("Constancia de RNC subida con éxito.");
+    } else if (id === "pep") {
+      updates.pepUploaded = true;
+      setPepUploaded(true);
+      toast.success("Declaración PEP subida con éxito.");
     } else {
       toast.success("Documento enviado a revisión");
       return;

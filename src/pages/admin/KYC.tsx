@@ -90,6 +90,9 @@ export default function KYC() {
         updateData.selfieUploaded = false;
         updateData.addressUploaded = false;
         updateData.incomeUploaded = false;
+        updateData.bankUploaded = false;
+        updateData.rncUploaded = false;
+        updateData.pepUploaded = false;
         updateData.documentsUploaded = false;
       }
 
@@ -163,6 +166,9 @@ export default function KYC() {
                       <DocChip ok={item.selfie}><Camera className="h-3 w-3" /> Selfie</DocChip>
                       <DocChip ok={item.address}><FileText className="h-3 w-3" /> Dirección</DocChip>
                       <DocChip ok={item.income}><FileText className="h-3 w-3" /> Ingresos</DocChip>
+                      {item.userDoc.bankUploaded && <DocChip ok={true}><FileText className="h-3 w-3" /> Banco</DocChip>}
+                      {item.userDoc.rncUploaded && <DocChip ok={true}><FileText className="h-3 w-3" /> RNC</DocChip>}
+                      {item.userDoc.pepUploaded && <DocChip ok={true}><FileText className="h-3 w-3" /> PEP</DocChip>}
                     </div>
                     {item.kycStatus === "verified" ? (
                       <div className="mt-3">
@@ -201,12 +207,15 @@ export default function KYC() {
               </button>
             </div>
 
-            <div className="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-5 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               {[
                 { label: "Cédula", ok: open.cedula },
                 { label: "Selfie", ok: open.selfie },
                 { label: "Dirección", ok: open.address },
-                { label: "Ingresos", ok: open.income }
+                { label: "Ingresos", ok: open.income },
+                { label: "Banco", ok: !!open.userDoc.bankUploaded },
+                { label: "RNC", ok: !!open.userDoc.rncUploaded },
+                { label: "PEP", ok: !!open.userDoc.pepUploaded }
               ].map((doc) => (
                 <div key={doc.label} className="space-y-2">
                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center justify-between">

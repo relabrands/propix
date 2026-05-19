@@ -78,7 +78,7 @@ export default function Onboarding() {
             {step === 2 ? "Crear mi cuenta gratis" : step === 0 ? "Comenzar" : "Siguiente"}
             <ArrowRight className="h-4 w-4" />
           </button>
-          {step === 0 && (
+          {(step === 0 || step === 2) && (
             <button
               onClick={skip}
               className="h-12 mt-3 w-full text-sm text-muted-foreground hover:text-foreground transition-colors"

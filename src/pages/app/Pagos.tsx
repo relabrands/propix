@@ -5,8 +5,9 @@ import { formatDateEs, formatUSD } from "@/lib/format";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/store/useAppStore";
-import { collection, onSnapshot, query as fsQuery, where, addDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { collection, onSnapshot, query as fsQuery, where, addDoc, doc, updateDoc, setDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { motion } from "framer-motion";
 
 const filters = ["Todos", "Recibidos", "Retirados"] as const;
 
@@ -69,11 +70,8 @@ export default function Pagos() {
     };
   }, [currentUser?.uid]);
 
-  // Load bank accounts from user doc, or use mock if none
-  const userBankAccounts: BankAccount[] = currentUser?.bankAccounts || [
-    { id: "b1", bank: "Banreservas", last4: "4521", verified: true, type: "Ahorros" },
-    { id: "b2", bank: "Banco Popular", last4: "8892", verified: false, type: "Corriente" },
-  ];
+  // Load bank accounts from user doc
+  const userBankAccounts: BankAccount[] = currentUser?.bankAccounts || [];
 
   // Filters mapping
   const filtered = transactions.filter((t) => {
@@ -96,6 +94,11 @@ export default function Pagos() {
 
   const handleAddBank = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser?.uid) {
+      toast.error("Sesión inválida");
+      return;
+    }
+
     if (!bankName || !accountNumber) {
       toast.error("Por favor completa todos los campos");
       return;
@@ -116,9 +119,9 @@ export default function Pagos() {
         type: accountType,
       };
 
-      await updateDoc(userRef, {
+      await setDoc(userRef, {
         bankAccounts: arrayUnion(newBank),
-      });
+      }, { merge: true });
 
       toast.success("Cuenta bancaria agregada exitosamente");
       setShowAddBank(false);
@@ -217,22 +220,28 @@ export default function Pagos() {
             </button>
           </div>
           <div className="space-y-2">
-            {userBankAccounts.map((b) => (
-              <div key={b.id} className="glass rounded-2xl p-4 flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-gradient-gold-soft border border-primary/30 grid place-items-center">
-                  <span className="font-display text-lg text-primary">{b.bank[0]}</span>
+            {userBankAccounts.length > 0 ? (
+              userBankAccounts.map((b) => (
+                <div key={b.id} className="glass rounded-2xl p-4 flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-gold-soft border border-primary/30 grid place-items-center">
+                    <span className="font-display text-lg text-primary">{b.bank[0]}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{b.bank}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">{b.type} · •••• {b.last4}</p>
+                  </div>
+                  {b.verified ? (
+                    <span className="text-[10px] text-success bg-success/15 px-2 py-1 rounded-full font-medium">✓ Verificada</span>
+                  ) : (
+                    <span className="text-[10px] text-warning bg-warning/15 px-2 py-1 rounded-full font-medium">Pendiente</span>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{b.bank}</p>
-                  <p className="text-[11px] text-muted-foreground font-mono">{b.type} · •••• {b.last4}</p>
-                </div>
-                {b.verified ? (
-                  <span className="text-[10px] text-success bg-success/15 px-2 py-1 rounded-full font-medium">✓ Verificada</span>
-                ) : (
-                  <span className="text-[10px] text-warning bg-warning/15 px-2 py-1 rounded-full font-medium">Pendiente</span>
-                )}
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-6 glass rounded-2xl">
+                No tienes cuentas bancarias registradas.
+              </p>
+            )}
           </div>
         </section>
 
