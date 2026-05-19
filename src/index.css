@@ -1,0 +1,176 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Propix — luxury Caribbean fintech design system. All colors HSL. */
+
+@layer base {
+  :root {
+    /* Dark mode is the only mode */
+    --background: 222 50% 7%;          /* #0A0F1E deep navy night */
+    --foreground: 210 20% 98%;         /* #F9FAFB */
+
+    --surface: 222 39% 11%;            /* #111827 surface card */
+    --surface-elevated: 222 35% 14%;
+
+    --card: 222 39% 11%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 222 39% 11%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 38 46% 61%;             /* #C9A96E warm gold */
+    --primary-foreground: 222 50% 7%;
+    --primary-glow: 38 70% 70%;
+
+    --secondary: 168 64% 50%;          /* #2DD4BF teal */
+    --secondary-foreground: 222 50% 7%;
+
+    --muted: 222 30% 16%;
+    --muted-foreground: 220 9% 65%;    /* #9CA3AF */
+
+    --accent: 38 46% 61%;
+    --accent-foreground: 222 50% 7%;
+
+    --success: 160 84% 39%;            /* #10B981 */
+    --success-foreground: 210 20% 98%;
+
+    --warning: 32 95% 55%;
+    --warning-foreground: 222 50% 7%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 38 30% 25% / 0.15;
+    --border-strong: 38 46% 61% / 0.25;
+    --input: 222 30% 18%;
+    --ring: 38 46% 61%;
+
+    --radius: 1rem;
+
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(38 50% 65%), hsl(38 60% 55%));
+    --gradient-gold-soft: linear-gradient(135deg, hsl(38 46% 61% / 0.15), hsl(38 46% 61% / 0.02));
+    --gradient-night: linear-gradient(180deg, hsl(222 50% 7%), hsl(222 55% 4%));
+    --gradient-ocean: linear-gradient(135deg, hsl(168 64% 50% / 0.2), hsl(38 46% 61% / 0.1));
+    --gradient-hero-overlay: linear-gradient(180deg, hsl(222 50% 7% / 0.1) 0%, hsl(222 50% 7% / 0.4) 50%, hsl(222 50% 7%) 100%);
+
+    /* Shadows */
+    --shadow-gold: 0 10px 40px -10px hsl(38 60% 55% / 0.4);
+    --shadow-glow: 0 0 30px hsl(38 60% 55% / 0.25);
+    --shadow-card: 0 8px 32px hsl(222 60% 3% / 0.6);
+    --shadow-elevated: 0 20px 60px -10px hsl(222 60% 3% / 0.8);
+
+    /* Motion */
+    --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 222 50% 7%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 38 46% 61%;
+    --sidebar-primary-foreground: 222 50% 7%;
+    --sidebar-accent: 222 30% 16%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 38 30% 25% / 0.15;
+    --sidebar-ring: 38 46% 61%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(38 46% 61% / 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 110%, hsl(168 64% 50% / 0.06), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  /* Subtle grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .font-mono, .font-numeric {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-feature-settings: 'tnum', 'zero';
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(38 46% 61% / 0.2); border-radius: 999px; }
+
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@layer components {
+  .glass {
+    background: linear-gradient(135deg, hsl(222 39% 11% / 0.7), hsl(222 39% 14% / 0.5));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(38 46% 61% / 0.15);
+  }
+
+  .glass-strong {
+    background: linear-gradient(135deg, hsl(222 39% 13% / 0.9), hsl(222 39% 16% / 0.7));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(38 46% 61% / 0.2);
+  }
+
+  .gold-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .gradient-text-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .grain-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+
+  .tap-highlight-none { -webkit-tap-highlight-color: transparent; }
+
+  .text-balance { text-wrap: balance; }
+}
