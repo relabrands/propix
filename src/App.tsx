@@ -36,9 +36,32 @@ import AdminMarketing from "./pages/admin/Marketing";
 import AdminConfiguracion from "./pages/admin/Configuracion";
 import AdminNotificaciones from "./pages/admin/Notificaciones";
 
+import { useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useAppStore } from "@/store/useAppStore";
+
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const setAuthed = useAppStore((s) => s.setAuthed);
+  const setUser = useAppStore((s) => s.setUser);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAuthed(true);
+        setUser(user);
+      } else {
+        setAuthed(false);
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [setAuthed, setUser]);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -83,6 +106,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

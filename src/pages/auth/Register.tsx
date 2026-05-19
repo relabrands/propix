@@ -3,12 +3,96 @@ import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, Upload, Check, Camera } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
+import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function Register() {
   const [step, setStep] = useState<1 | 2>(1);
   const [accepted, setAccepted] = useState(false);
-  const setAuthed = useAppStore((s) => s.setAuthed);
+  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const setAuthed = useAppStore((s) => s.setAuthed);
+  const setUser = useAppStore((s) => s.setUser);
+
+  const saveUserToFirestore = async (uid: string, userData: any) => {
+    const userRef = doc(db, "users", uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        ...userData,
+        createdAt: new Date().toISOString(),
+        role: "investor",
+        kycStatus: "pending"
+      });
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accepted) return toast.error("Debes aceptar los términos");
+    if (!name || !email || !password || !phone) return toast.error("Todos los campos son obligatorios");
+
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      await updateProfile(user, { displayName: name });
+      
+      await saveUserToFirestore(user.uid, {
+        name,
+        email,
+        phone,
+      });
+
+      setStep(2);
+    } catch (error: any) {
+      toast.error(error.message || "Error al registrarse");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    if (!accepted) return toast.error("Debes aceptar los términos");
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+      
+      await saveUserToFirestore(user.uid, {
+        name: user.displayName,
+        email: user.email,
+        phone: user.phoneNumber || "",
+      });
+
+      setStep(2);
+    } catch (error: any) {
+      toast.error(error.message || "Error con Google");
+    }
+  };
+
+  const handleFinish = async () => {
+    if (auth.currentUser) {
+      try {
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+          kycStatus: "submitted",
+          documentsUploaded: true
+        }, { merge: true });
+        
+        toast.success("¡Cuenta creada! Verificación pendiente.");
+        setAuthed(true);
+        setUser(auth.currentUser);
+        navigate("/app");
+      } catch (err: any) {
+        toast.error("Error al guardar información");
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen px-6 py-8 max-w-md mx-auto safe-top safe-bottom flex flex-col">
@@ -30,21 +114,15 @@ export default function Register() {
             Empieza a invertir en menos de 3 minutos.
           </p>
 
-          <form
-            className="mt-8 space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!accepted) return toast.error("Debes aceptar los términos");
-              setStep(2);
-            }}
-          >
-            <Input placeholder="Nombre completo" defaultValue="Jorge Rodríguez" />
-            <Input placeholder="Correo electrónico" type="email" defaultValue="jorge@example.do" />
-            <Input placeholder="+1 (809) 000-0000" type="tel" defaultValue="+1 (809) 555-0142" />
-            <Input placeholder="Contraseña" type="password" defaultValue="micontra123" />
+          <form className="mt-8 space-y-3" onSubmit={handleRegister}>
+            <Input placeholder="Nombre completo" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input placeholder="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input placeholder="+1 (809) 000-0000" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+            <Input placeholder="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
 
             <button
               type="button"
+              onClick={handleGoogle}
               className="w-full h-12 rounded-2xl glass text-sm font-medium flex items-center justify-center gap-2"
             >
               <span className="h-5 w-5 rounded-full bg-foreground text-background grid place-items-center text-[10px] font-bold">G</span>
@@ -66,9 +144,10 @@ export default function Register() {
 
             <button
               type="submit"
-              className="mt-4 h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold transition-transform active:scale-[0.98]"
+              disabled={loading}
+              className="mt-4 h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              Continuar
+              {loading ? "Cargando..." : "Continuar"}
             </button>
           </form>
         </div>
@@ -95,11 +174,7 @@ export default function Register() {
           </div>
 
           <button
-            onClick={() => {
-              toast.success("¡Cuenta creada! Verificación pendiente.");
-              setAuthed(true);
-              navigate("/app");
-            }}
+            onClick={handleFinish}
             className="mt-auto h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold"
           >
             Finalizar registro

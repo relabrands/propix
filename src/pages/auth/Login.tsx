@@ -1,21 +1,36 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Fingerprint, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function Login() {
   const [show, setShow] = useState(false);
-  const [email, setEmail] = useState("jorge@example.do");
-  const [password, setPassword] = useState("••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const setAuthed = useAppStore((s) => s.setAuthed);
+  const setUser = useAppStore((s) => s.setUser);
   const navigate = useNavigate();
 
-  const handle = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthed(true);
-    toast.success("Bienvenido de vuelta, Jorge 👋");
-    navigate("/app");
+    if (!email || !password) return toast.error("Ingresa correo y contraseña");
+
+    setLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      setAuthed(true);
+      setUser(userCredential.user);
+      toast.success(`Bienvenido de vuelta${userCredential.user.displayName ? `, ${userCredential.user.displayName}` : ""} 👋`);
+      navigate("/app");
+    } catch (error: any) {
+      toast.error(error.message || "Credenciales incorrectas");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,7 +42,7 @@ export default function Login() {
         <p className="text-muted-foreground text-sm mt-2">Inicia sesión para revisar tu portafolio.</p>
       </div>
 
-      <form onSubmit={handle} className="mt-10 space-y-4">
+      <form onSubmit={handleLogin} className="mt-10 space-y-4">
         <Field
           icon={<Mail className="h-4 w-4" />}
           type="email"
@@ -54,24 +69,10 @@ export default function Login() {
 
         <button
           type="submit"
-          className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold transition-transform active:scale-[0.98]"
+          disabled={loading}
+          className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold transition-transform active:scale-[0.98] disabled:opacity-50"
         >
-          Iniciar sesión
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            toast("Autenticando con Face ID...", { icon: "🔒" });
-            setTimeout(() => {
-              setAuthed(true);
-              navigate("/app");
-            }, 900);
-          }}
-          className="h-14 w-full rounded-2xl glass flex items-center justify-center gap-2 text-sm font-medium"
-        >
-          <Fingerprint className="h-5 w-5 text-primary" />
-          Iniciar con Face ID
+          {loading ? "Cargando..." : "Iniciar sesión"}
         </button>
       </form>
 
