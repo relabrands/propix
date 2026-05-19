@@ -9,21 +9,50 @@ import { useAppStore } from "@/store/useAppStore";
 import { collection, onSnapshot, query as fsQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import type { Property } from "@/lib/mockData";
+
+interface Investment {
+  id: string;
+  userId: string;
+  propertyId: string;
+  propertyName: string;
+  propertyImage: string;
+  location: string;
+  fractionsCount: number;
+  investedAmount: number;
+  monthlyIncomeEstimate: number;
+  roiAnnual: number;
+  date: string;
+}
+
+interface Transaction {
+  id: string;
+  userId: string;
+  investor: string;
+  property: string;
+  type: string;
+  amount: number;
+  fee?: number;
+  method?: string;
+  status: string;
+  date: string;
+}
+
 const ranges = ["3M", "6M", "1A"] as const;
 
 export default function Portafolio() {
   const currentUser = useAppStore((s) => s.user);
   const [range, setRange] = useState<typeof ranges[number]>("6M");
 
-  const [investments, setInvestments] = useState<any[]>([]);
-  const [properties, setProperties] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // 1. Subscribe to properties to get latest statuses and info
     const unsubscribeProps = onSnapshot(collection(db, "properties"), (snapshot) => {
-      setProperties(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setProperties(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as unknown as Property[]);
     });
 
     if (!currentUser?.uid) {
@@ -34,13 +63,13 @@ export default function Portafolio() {
     // 2. Subscribe to user investments
     const qInv = fsQuery(collection(db, "investments"), where("userId", "==", currentUser.uid));
     const unsubscribeInv = onSnapshot(qInv, (snapshot) => {
-      setInvestments(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setInvestments(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as unknown as Investment[]);
     });
 
     // 3. Subscribe to user transactions
     const qTx = fsQuery(collection(db, "transactions"), where("userId", "==", currentUser.uid));
     const unsubscribeTx = onSnapshot(qTx, (snapshot) => {
-      setTransactions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setTransactions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as unknown as Transaction[]);
       setLoading(false);
     });
 

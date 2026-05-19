@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import type { Property } from "@/lib/mockData";
+
 export default function PropertyDetail() {
   const { id } = useParams();
-  const [property, setProperty] = useState<any>(null);
+  const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [imgIdx, setImgIdx] = useState(0);
   const [amount, setAmount] = useState(1);
@@ -28,7 +30,7 @@ export default function PropertyDetail() {
     const docRef = doc(db, "properties", id);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        setProperty({ id: docSnap.id, ...docSnap.data() });
+        setProperty({ id: docSnap.id, ...docSnap.data() } as unknown as Property);
       } else {
         setProperty(null);
       }

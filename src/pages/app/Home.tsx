@@ -10,13 +10,28 @@ import { useAppStore } from "@/store/useAppStore";
 import { collection, onSnapshot, query as fsQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import type { Property } from "@/lib/mockData";
+
+interface Transaction {
+  id: string;
+  userId: string;
+  investor: string;
+  property: string;
+  type: string;
+  amount: number;
+  fee?: number;
+  method?: string;
+  status: string;
+  date: string;
+}
+
 export default function Home() {
   const currentUser = useAppStore((s) => s.user);
   const firstName = currentUser?.name?.split(" ")[0] || currentUser?.displayName?.split(" ")[0] || "Inversor";
   const kycStatus = currentUser?.kycStatus || "pending";
 
-  const [featuredProperties, setFeaturedProperties] = useState<any[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +41,7 @@ export default function Home() {
       const data = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
-      }));
+      })) as unknown as Property[];
       // Filter out only available properties to highlight
       setFeaturedProperties(data.filter((p) => p.status === "disponible" || p.status === "nuevo").slice(0, 3));
     });
@@ -42,9 +57,9 @@ export default function Home() {
       const data = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
-      }));
+      })) as unknown as Transaction[];
       // Sort client side by date descending
-      data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      data.sort((a: Transaction, b: Transaction) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecentTransactions(data);
       setLoading(false);
     });

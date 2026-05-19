@@ -8,10 +8,12 @@ import { doc, collection, addDoc, updateDoc, runTransaction } from "firebase/fir
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
+import type { Property } from "@/lib/mockData";
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  property: any;
+  property: Property;
   initialAmount: number;
 }
 
@@ -109,9 +111,10 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
       });
 
       setStep("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message || "Error al procesar la inversión");
+      const errMsg = err instanceof Error ? err.message : "Error al procesar la inversión";
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }

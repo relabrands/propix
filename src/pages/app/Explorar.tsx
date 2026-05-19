@@ -6,11 +6,13 @@ import { Search } from "lucide-react";
 import { collection, onSnapshot, query as fsQuery } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import type { Property } from "@/lib/mockData";
+
 const filters = ["Todos", "Disponibles", "Casi llenos", "Rentando"] as const;
 
 export default function Explorar() {
   const [active, setActive] = useState<typeof filters[number]>("Todos");
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +22,7 @@ export default function Explorar() {
       const data = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
-      }));
+      })) as unknown as Property[];
       setProperties(data);
       setLoading(false);
     });

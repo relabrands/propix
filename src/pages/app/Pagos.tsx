@@ -18,10 +18,23 @@ interface BankAccount {
   type: string;
 }
 
+interface Transaction {
+  id: string;
+  userId: string;
+  investor: string;
+  property: string;
+  type: string;
+  amount: number;
+  fee?: number;
+  method?: string;
+  status: string;
+  date: string;
+}
+
 export default function Pagos() {
   const currentUser = useAppStore((s) => s.user);
   const [filter, setFilter] = useState<typeof filters[number]>("Todos");
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modals state
@@ -44,9 +57,9 @@ export default function Pagos() {
     // Subscribe to user transactions
     const qTx = fsQuery(collection(db, "transactions"), where("userId", "==", currentUser.uid));
     const unsubscribeTx = onSnapshot(qTx, (snapshot) => {
-      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as unknown as Transaction[];
       // Sort client side by date descending
-      data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      data.sort((a: Transaction, b: Transaction) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setTransactions(data);
       setLoading(false);
     });
