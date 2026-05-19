@@ -84,7 +84,7 @@ export default function KYC() {
         kycStatus: newStatus
       };
       
-      // Clear flags on rejection so user must upload again
+      // Clear flags and URLs on rejection so user must upload again
       if (decision === "rejected") {
         updateData.cedulaUploaded = false;
         updateData.selfieUploaded = false;
@@ -94,6 +94,14 @@ export default function KYC() {
         updateData.rncUploaded = false;
         updateData.pepUploaded = false;
         updateData.documentsUploaded = false;
+        
+        updateData.cedulaUrl = "";
+        updateData.selfieUrl = "";
+        updateData.addressUrl = "";
+        updateData.incomeUrl = "";
+        updateData.bankUrl = "";
+        updateData.rncUrl = "";
+        updateData.pepUrl = "";
       }
 
       await updateDoc(doc(db, "users", investorId), updateData);
@@ -104,7 +112,11 @@ export default function KYC() {
         cedula: decision === "approved",
         selfie: decision === "approved",
         address: decision === "approved",
-        income: decision === "approved"
+        income: decision === "approved",
+        userDoc: {
+          ...inv.userDoc,
+          ...updateData
+        }
       } : inv));
       
       toast.success(decision === "approved" ? "KYC verificado y aprobado." : "KYC rechazado, notificado al usuario.");
@@ -209,29 +221,50 @@ export default function KYC() {
 
             <div className="p-5 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               {[
-                { label: "Cédula", ok: open.cedula },
-                { label: "Selfie", ok: open.selfie },
-                { label: "Dirección", ok: open.address },
-                { label: "Ingresos", ok: open.income },
-                { label: "Banco", ok: !!open.userDoc.bankUploaded },
-                { label: "RNC", ok: !!open.userDoc.rncUploaded },
-                { label: "PEP", ok: !!open.userDoc.pepUploaded }
-              ].map((doc) => (
-                <div key={doc.label} className="space-y-2">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                    <span>{doc.label}</span>
-                    <span className={doc.ok ? "text-success text-[10px]" : "text-destructive text-[10px]"}>
-                      {doc.ok ? "Subido" : "Pendiente"}
-                    </span>
-                  </div>
-                  <div className="aspect-[3/4] rounded-md bg-gradient-to-br from-muted to-background border border-border flex items-center justify-center relative group cursor-zoom-in overflow-hidden">
-                    <FileText className="h-12 w-12 text-muted-foreground/40" />
-                    <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <ZoomIn className="h-6 w-6 text-primary" />
+                { label: "Cédula", ok: open.cedula, url: open.userDoc.cedulaUrl },
+                { label: "Selfie", ok: open.selfie, url: open.userDoc.selfieUrl },
+                { label: "Dirección", ok: open.address, url: open.userDoc.addressUrl },
+                { label: "Ingresos", ok: open.income, url: open.userDoc.incomeUrl },
+                { label: "Banco", ok: !!open.userDoc.bankUploaded, url: open.userDoc.bankUrl },
+                { label: "RNC", ok: !!open.userDoc.rncUploaded, url: open.userDoc.rncUrl },
+                { label: "PEP", ok: !!open.userDoc.pepUploaded, url: open.userDoc.pepUrl }
+              ].map((doc) => {
+                const isPdf = doc.url && (doc.url.toLowerCase().includes(".pdf") || doc.url.toLowerCase().includes("%2fpdf"));
+                return (
+                  <div key={doc.label} className="space-y-2">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                      <span>{doc.label}</span>
+                      <span className={doc.ok ? "text-success text-[10px]" : "text-destructive text-[10px]"}>
+                        {doc.ok ? "Subido" : "Pendiente"}
+                      </span>
                     </div>
+                    {doc.ok && doc.url ? (
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="aspect-[3/4] rounded-md bg-gradient-to-br from-muted to-background border border-border flex items-center justify-center relative group cursor-zoom-in overflow-hidden"
+                      >
+                        {isPdf ? (
+                          <div className="flex flex-col items-center gap-2 p-2 text-center">
+                            <FileText className="h-10 w-10 text-primary animate-pulse" />
+                            <span className="text-[10px] text-muted-foreground truncate max-w-full font-semibold">Ver PDF</span>
+                          </div>
+                        ) : (
+                          <img src={doc.url} alt={doc.label} className="h-full w-full object-cover" />
+                        )}
+                        <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ZoomIn className="h-6 w-6 text-primary" />
+                        </div>
+                      </a>
+                    ) : (
+                      <div className="aspect-[3/4] rounded-md bg-gradient-to-br from-muted to-background border border-border flex items-center justify-center relative group overflow-hidden">
+                        <FileText className="h-12 w-12 text-muted-foreground/40" />
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="px-5 pb-5">
