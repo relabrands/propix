@@ -31,6 +31,7 @@ export default function Home() {
   const kycStatus = currentUser?.kycStatus || "pending";
 
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ export default function Home() {
         id: docSnap.id,
         ...docSnap.data(),
       })) as unknown as Property[];
+      setProperties(data);
       // Filter out only available properties to highlight
       setFeaturedProperties(data.filter((p) => p.status === "disponible" || p.status === "nuevo").slice(0, 3));
     });
@@ -81,8 +83,14 @@ export default function Home() {
   // Aggregate stats from real investments (not KYC income)
   const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
   const propertiesCount = new Set(investments.map(inv => inv.propertyId)).size;
-  const monthlyIncome = investments.reduce((sum, inv) => sum + (inv.monthlyIncomeEstimate || 0), 0);
-  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12 / totalInvested) * 100 : 12.5; // 12.5% default mock
+  const monthlyIncome = investments.reduce((sum, inv) => {
+    const prop = properties.find((p) => p.id === inv.propertyId);
+    if (prop && prop.roiAnnual) {
+      return sum + ((inv.investedAmount || 0) * (prop.roiAnnual / 100)) / 12;
+    }
+    return sum + (inv.monthlyIncomeEstimate || 0);
+  }, 0);
+  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12 / totalInvested) * 100 : 0;
 
   // Sum all completed distributions for total earned
   const totalEarned = recentTransactions

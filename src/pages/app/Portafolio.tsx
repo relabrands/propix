@@ -82,8 +82,14 @@ export default function Portafolio() {
 
   // Aggregate stats from real investments
   const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
-  const monthlyIncome = investments.reduce((sum, inv) => sum + (inv.monthlyIncomeEstimate || 0), 0);
-  const roiAnnual = totalInvested > 0 ? ((monthlyIncome * 12) / totalInvested) * 100 : 12.5;
+  const monthlyIncome = investments.reduce((sum, inv) => {
+    const prop = properties.find((p) => p.id === inv.propertyId);
+    if (prop && prop.roiAnnual) {
+      return sum + ((inv.investedAmount || 0) * (prop.roiAnnual / 100)) / 12;
+    }
+    return sum + (inv.monthlyIncomeEstimate || 0);
+  }, 0);
+  const roiAnnual = totalInvested > 0 ? ((monthlyIncome * 12) / totalInvested) * 100 : 0;
 
   const distributions = transactions.filter(
     (t) => t.type === "Distribución" && t.status === "Completada"

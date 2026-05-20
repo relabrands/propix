@@ -146,8 +146,9 @@ export default function PropertyDetail() {
   const totalPrice = property.totalPrice || 0;
   const monthlyRent = property.monthlyIncomeEstimate || 0;
 
-  const monthlyEst = (monthlyRent / totalFractions) * amount;
-  const annualEst = monthlyEst * 12;
+  const subtotal = amount * pricePerFraction;
+  const annualEst = subtotal * ((property.roiAnnual || 0) / 100);
+  const monthlyEst = annualEst / 12;
 
   const galleryList = property.gallery && property.gallery.length > 0 ? property.gallery : [property.image];
 
