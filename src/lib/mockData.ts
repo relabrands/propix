@@ -29,6 +29,7 @@ export interface Property {
   tourUrl?: string;
   createdAt?: string;
   returnsStart?: string;
+  managementFeeAnnual?: number; // percent annual, e.g. 1.0 — deducted from gross ROI
 }
 
 /**

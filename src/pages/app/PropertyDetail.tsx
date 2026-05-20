@@ -147,7 +147,20 @@ export default function PropertyDetail() {
   const monthlyRent = property.monthlyIncomeEstimate || 0;
 
   const subtotal = amount * pricePerFraction;
-  const annualEst = subtotal * ((property.roiAnnual || 0) / 100);
+  const grossRoi = property.roiAnnual || 0;
+  const mgmtFeePct = property.managementFeeAnnual ?? 1.0; // default 1% anual
+  const netRoi = Math.max(0, grossRoi - mgmtFeePct);
+
+  // Gross numbers (before fee)
+  const grossAnnual = subtotal * (grossRoi / 100);
+  const grossMonthly = grossAnnual / 12;
+
+  // Management fee amounts
+  const feeAnnual = subtotal * (mgmtFeePct / 100);
+  const feeMonthly = feeAnnual / 12;
+
+  // Net numbers (after fee)
+  const annualEst = subtotal * (netRoi / 100);
   const monthlyEst = annualEst / 12;
 
   const galleryList = property.gallery && property.gallery.length > 0 ? property.gallery : [property.image];
@@ -244,8 +257,8 @@ export default function PropertyDetail() {
 
         {/* Metrics 2x2 */}
         <div className="grid grid-cols-2 gap-3">
-          <Metric label="ROI Anual" value={formatPct(property.roiAnnual || 0)} accent="teal" />
-          <Metric label="Renta mensual est." value={formatUSD(monthlyRent, { decimals: 0 })} />
+          <Metric label="ROI Bruto" value={`${grossRoi}%`} accent="teal" />
+          <Metric label="ROI Neto (tras fees)" value={`${netRoi.toFixed(1)}%`} accent="gold" />
           <Metric label="Precio total" value={formatUSD(totalPrice, { decimals: 0 })} />
           <Metric
             label="Fracciones disponibles"
@@ -256,6 +269,16 @@ export default function PropertyDetail() {
               <Metric label="Inicio de retornos" value={property.returnsStart} accent="gold" />
             </div>
           )}
+          <div className="col-span-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-start gap-2.5">
+            <span className="text-amber-400 text-base mt-0.5">🛡️</span>
+            <div>
+              <p className="text-xs font-semibold text-amber-300">Fee de mantenimiento: {mgmtFeePct}% anual</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                Cubre administración, mantenimiento preventivo y gestión de rentas. Se descuenta
+                del retorno bruto antes de que recibas tu distribución mensual.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Funding */}
@@ -317,10 +340,25 @@ export default function PropertyDetail() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
-            <CalcCell label="Fracciones" value={amount.toString()} />
-            <CalcCell label="Mes" value={`+${formatUSD(monthlyEst)}`} highlight />
-            <CalcCell label="Año" value={`+${formatUSD(annualEst, { decimals: 0 })}`} highlight />
+          {/* Return breakdown: bruto / fee / neto */}
+          <div className="space-y-2 pt-2 border-t border-border">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Retorno bruto mensual</span>
+              <span className="font-mono text-foreground">+{formatUSD(grossMonthly)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Fee de mantenimiento ({mgmtFeePct}%)</span>
+              <span className="font-mono text-amber-400">−{formatUSD(feeMonthly)}</span>
+            </div>
+            <div className="h-px bg-border" />
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold">Retorno neto mensual</span>
+              <span className="font-mono text-lg font-bold text-success">+{formatUSD(monthlyEst)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Proyección anual neta</span>
+              <span className="font-mono">+{formatUSD(annualEst, { decimals: 0 })}</span>
+            </div>
           </div>
 
           {fractionsSold < totalFractions && (
@@ -444,11 +482,13 @@ export default function PropertyDetail() {
   );
 }
 
-function Metric({ label, value, accent }: { label: string; value: string; accent?: "teal" }) {
+interface MetricProps { label: string; value: string; accent?: "teal" | "gold" }
+function Metric(props: MetricProps) {
+  const { label, value, accent } = props;
   return (
     <div className="glass rounded-2xl p-4">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className={`font-mono text-xl mt-1 ${accent === "teal" ? "text-secondary" : "text-foreground"}`}>{value}</p>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={`font-mono text-lg mt-1 ${accent === "teal" ? "text-teal-400" : accent === "gold" ? "text-primary" : "text-foreground"}`}>{value}</p>
     </div>
   );
 }

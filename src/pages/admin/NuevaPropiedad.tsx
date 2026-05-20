@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Upload, ImagePlus, FileText, ArrowRight, ArrowLeft, Send, AlertCircle, Loader2 } from "lucide-react";
 import PageHeader from "@/components/admin/PageHeader";
 import StatusPill from "@/components/admin/StatusPill";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 
@@ -67,7 +67,17 @@ export default function NuevaPropiedad() {
   const [roi, setRoi] = useState(20);
   const [monthlyRent, setMonthlyRent] = useState(1500);
   const [returnsStart, setReturnsStart] = useState("Inmediatamente");
+  const [managementFee, setManagementFee] = useState(1.0); // default 1% anual
   const fractionPrice = fractions > 0 ? totalPrice / fractions : 0;
+
+  // Load the global default management fee from Firestore config
+  useEffect(() => {
+    getDoc(doc(db, "config", "platformFees")).then((snap) => {
+      if (snap.exists() && snap.data().managementFeeDefault !== undefined) {
+        setManagementFee(snap.data().managementFeeDefault);
+      }
+    }).catch(() => {/* keep default */});
+  }, []);
 
   // Step 2
   const [photos, setPhotos] = useState<string[]>([]);
@@ -197,6 +207,7 @@ export default function NuevaPropiedad() {
         pricePerFraction: fractionPrice,
         roiAnnual: roi,
         monthlyIncomeEstimate: monthlyRent,
+        managementFeeAnnual: managementFee,
         image: photos.length > 0 ? photos[0] : "",
         gallery: photos,
         documents: docs,
@@ -356,11 +367,34 @@ export default function NuevaPropiedad() {
                 <Field label="Renta mensual estimada (USD)" required full>
                   <input type="number" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} className="np-input font-mono" />
                 </Field>
-                <Field label="Inicio de retornos" required full>
+                <Field label="Inicio de retornos" required>
                   <select value={returnsStart} onChange={e => setReturnsStart(e.target.value)} className="np-input font-medium">
                     <option value="Inmediatamente">Inmediatamente</option>
                     <option value="Al completar fondeo">Al completar fondeo</option>
                   </select>
+                </Field>
+                <Field
+                  label="Fee de mantenimiento anual (%)"
+                  required
+                  hint="Se descuenta del retorno bruto antes de distribuir. Por defecto toma el valor global."
+                >
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      value={managementFee}
+                      onChange={(e) => setManagementFee(Number(e.target.value))}
+                      className="np-input font-mono pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-primary/70 flex items-center gap-1">
+                    <span>ROI neto estimado:</span>
+                    <span className="font-mono font-semibold">{Math.max(0, roi - managementFee).toFixed(1)}%</span>
+                    <span className="text-muted-foreground">({roi}% bruto − {managementFee}% fee)</span>
+                  </div>
                 </Field>
               </div>
             </div>

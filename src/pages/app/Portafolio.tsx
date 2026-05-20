@@ -80,16 +80,17 @@ export default function Portafolio() {
     };
   }, [currentUser?.uid]);
 
-  // Aggregate stats from real investments
+  // Aggregate stats from real investments — use NET ROI (gross minus management fee)
   const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
   const monthlyIncome = investments.reduce((sum, inv) => {
     const prop = properties.find((p) => p.id === inv.propertyId);
-    if (prop && prop.roiAnnual) {
-      return sum + ((inv.investedAmount || 0) * (prop.roiAnnual / 100)) / 12;
-    }
-    return sum + (inv.monthlyIncomeEstimate || 0);
+    const grossRoi = prop?.roiAnnual ?? inv.roiAnnual ?? 0;
+    const mgmtFee = prop?.managementFeeAnnual ?? 1.0; // default 1%
+    const netRoi = Math.max(0, grossRoi - mgmtFee);
+    return sum + ((inv.investedAmount || 0) * (netRoi / 100)) / 12;
   }, 0);
-  const roiAnnual = totalInvested > 0 ? ((monthlyIncome * 12) / totalInvested) * 100 : 0;
+  // Net ROI (weighted average across all investments)
+  const roiNet = totalInvested > 0 ? ((monthlyIncome * 12) / totalInvested) * 100 : 0;
 
   const distributions = transactions.filter(
     (t) => t.type === "Distribución" && t.status === "Completada"
@@ -143,9 +144,12 @@ export default function Portafolio() {
           <p className="font-display text-5xl mt-2">{formatUSD(totalInvested, { decimals: 0 })}</p>
           <div className="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-border">
             <SmallStat label="Ganado" value={formatUSD(totalEarned)} accent="success" />
-            <SmallStat label="ROI" value={formatPct(roiAnnual)} accent="teal" />
-            <SmallStat label="Mes" value={`+${formatUSD(monthlyIncome)}`} accent="success" />
+            <SmallStat label="ROI Neto" value={formatPct(roiNet)} accent="teal" />
+            <SmallStat label="Mes (neto)" value={`+${formatUSD(monthlyIncome)}`} accent="success" />
           </div>
+          <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
+            * Neto tras deducir el fee de mantenimiento. Retornos brutos pueden diferir.
+          </p>
         </div>
 
         {/* Chart */}

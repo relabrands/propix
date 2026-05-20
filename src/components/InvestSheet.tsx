@@ -252,10 +252,37 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                       <div className="border-t border-border pt-3 space-y-2 text-sm">
                         <Row label="Fracciones" value={amount.toString()} />
                         <Row label="Inversión" value={formatUSD(subtotal, { decimals: 0 })} />
-                        <Row label="Renta mensual est." value={`+${formatUSD(((property.monthlyIncomeEstimate || 0) / (property.totalFractions || 1)) * amount)}`} highlight />
+                        {(() => {
+                          const grossRoi = property.roiAnnual || 0;
+                          const mgmtFeePct = property.managementFeeAnnual ?? 1.0;
+                          const netRoi = Math.max(0, grossRoi - mgmtFeePct);
+                          const netMonthly = (subtotal * (netRoi / 100)) / 12;
+                          return (
+                            <Row label="Retorno neto mensual est." value={`+${formatUSD(netMonthly)}`} highlight />
+                          );
+                        })()}
                         <Row label="Método" value="Billetera Propix" />
                       </div>
                     </div>
+
+                    {/* Management fee disclosure */}
+                    {(() => {
+                      const mgmtFeePct = property.managementFeeAnnual ?? 1.0;
+                      const feeMonthly = (subtotal * (mgmtFeePct / 100)) / 12;
+                      return (
+                        <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-start gap-2.5">
+                          <span className="text-amber-400 text-base mt-0.5">🛡️</span>
+                          <div className="text-xs leading-relaxed">
+                            <p className="font-semibold text-amber-300 mb-0.5">Fee de mantenimiento: {mgmtFeePct}% anual</p>
+                            <p className="text-muted-foreground">
+                              Al confirmar, aceptas que <span className="text-foreground font-medium">{formatUSD(feeMonthly)}/mes</span> se deducirán
+                              como fee de administración y mantenimiento antes de tu distribución mensual.
+                              Este cargo cubre gestión operativa, mantenimiento preventivo y cobro de rentas.
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                       Al confirmar aceptas el contrato de fideicomiso. Las inversiones inmobiliarias conllevan riesgos
