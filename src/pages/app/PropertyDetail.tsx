@@ -46,7 +46,17 @@ export default function PropertyDetail() {
     }
 
     if (kycStatus === "submitted" || kycStatus === "inReview") {
-      toast.error("Tu verificación KYC está en proceso. Te notificaremos cuando tu perfil haya sido aprobado.");
+      toast.error("Tu verificación KYC está en proceso.", {
+        description: "Te notificaremos cuando tu perfil haya sido aprobado.",
+      });
+      return;
+    }
+
+    if (kycStatus === "pending" || kycStatus === "rejected") {
+      toast.error("Aún tu cuenta no está verificada para invertir.", {
+        description: "Por favor completa tu perfil y espera la aprobación.",
+        duration: 5000,
+      });
       return;
     }
 
@@ -238,6 +248,17 @@ export default function PropertyDetail() {
             <CalcCell label="Mes" value={`+${formatUSD(monthlyEst)}`} highlight />
             <CalcCell label="Año" value={`+${formatUSD(annualEst, { decimals: 0 })}`} highlight />
           </div>
+
+          {fractionsSold < totalFractions && (
+            <div className="pt-2">
+              <button
+                onClick={handleInvestClick}
+                className="h-12 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+              >
+                Invertir {formatUSD(amount * pricePerFraction, { decimals: 0 })}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Amenities */}

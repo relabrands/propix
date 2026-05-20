@@ -127,7 +127,8 @@ export default function DocumentosKYC() {
     setUploadingId(docId);
     const toastId = toast.loading(`Subiendo ${file.name}...`);
     try {
-      const storageRef = ref(storage, `kyc/${currentUser.uid}/${docId}_${Date.now()}_${file.name}`);
+      const safeFilename = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const storageRef = ref(storage, `kyc/${currentUser.uid}/${docId}_${Date.now()}_${safeFilename}`);
       await uploadBytes(storageRef, file);
       const downloadUrl = await getDownloadURL(storageRef);
 

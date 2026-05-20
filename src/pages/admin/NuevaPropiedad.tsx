@@ -24,6 +24,19 @@ const REQUIRED_DOCS = [
   "Registro mercantil de la desarrolladora",
 ];
 
+const AMENITIES_LIST = [
+  "Piscina",
+  "Gimnasio",
+  "Seguridad 24/7",
+  "Vista al mar",
+  "Ascensor",
+  "Parqueo",
+  "Área social",
+  "Balcón",
+  "Línea blanca",
+  "Amueblado"
+];
+
 const PROVINCIAS_RD = [
   "La Altagracia",
   "La Romana",
@@ -48,6 +61,7 @@ export default function NuevaPropiedad() {
   const [province, setProvince] = useState("La Altagracia");
   const [sector, setSector] = useState("");
   const [address, setAddress] = useState("");
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [totalPrice, setTotalPrice] = useState(80000);
   const [fractions, setFractions] = useState(80);
   const [roi, setRoi] = useState(20);
@@ -85,6 +99,10 @@ export default function NuevaPropiedad() {
       }
       if (!sector) {
         toast.error("Sector requerido", { description: "Debes especificar el sector de la propiedad." });
+        return;
+      }
+      if (!address) {
+        toast.error("Dirección requerida", { description: "Debes especificar la dirección exacta." });
         return;
       }
       if (totalPrice <= 0 || fractions <= 0) {
@@ -175,6 +193,7 @@ export default function NuevaPropiedad() {
         description,
         type,
         location: `${sector || "Sin sector"}, ${province}`,
+        address,
         totalPrice,
         totalFractions: fractions,
         fractionsSold: 0,
@@ -185,7 +204,7 @@ export default function NuevaPropiedad() {
         gallery: photos,
         documents: docs,
         tourUrl: tour,
-        amenities: ["Piscina", "Gimnasio", "Seguridad 24/7", "Vista al mar"],
+        amenities: selectedAmenities,
         status: "disponible",
         daysLeft: 30,
         investorsCount: 0,
@@ -228,6 +247,7 @@ export default function NuevaPropiedad() {
                 setDescription("");
                 setSector("");
                 setAddress("");
+                setSelectedAmenities([]);
                 setPhotos([]);
                 setDocs({});
               }}
@@ -337,6 +357,32 @@ export default function NuevaPropiedad() {
                 <Field label="Renta mensual estimada (USD)" required full>
                   <input type="number" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} className="np-input font-mono" />
                 </Field>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-sm font-medium mb-3">Amenidades</h4>
+              <div className="flex flex-wrap gap-2">
+                {AMENITIES_LIST.map((am) => {
+                  const isSelected = selectedAmenities.includes(am);
+                  return (
+                    <button
+                      key={am}
+                      onClick={() =>
+                        setSelectedAmenities((prev) =>
+                          isSelected ? prev.filter((a) => a !== am) : [...prev, am]
+                        )
+                      }
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-surface border border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      {am}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

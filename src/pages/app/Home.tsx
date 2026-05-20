@@ -32,6 +32,7 @@ export default function Home() {
 
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [investments, setInvestments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,16 +65,23 @@ export default function Home() {
       setLoading(false);
     });
 
+    // 3. Subscribe to user investments
+    const qInv = fsQuery(collection(db, "investments"), where("userId", "==", currentUser.uid));
+    const unsubscribeInv = onSnapshot(qInv, (snapshot) => {
+      setInvestments(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     return () => {
       unsubscribeProps();
       unsubscribeTxs();
+      unsubscribeInv();
     };
   }, [currentUser?.uid]);
 
-  // Aggregate stats from currentUser
-  const totalInvested = currentUser?.totalInvested || 0;
-  const propertiesCount = currentUser?.propertiesCount || 0;
-  const monthlyIncome = currentUser?.monthlyIncome || 0;
+  // Aggregate stats from real investments (not KYC income)
+  const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
+  const propertiesCount = new Set(investments.map(inv => inv.propertyId)).size;
+  const monthlyIncome = investments.reduce((sum, inv) => sum + (inv.monthlyIncomeEstimate || 0), 0);
   const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12 / totalInvested) : 0.125; // 12.5% default mock
 
   // Sum all completed distributions for total earned

@@ -63,7 +63,7 @@ export default function Propiedades() {
 
   const items = properties.filter((p) => {
     if (filter !== "Todas" && p.status !== filter) return false;
-    if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (searchQuery && !p.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
