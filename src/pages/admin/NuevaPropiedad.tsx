@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Upload, ImagePlus, FileText, ArrowRight, ArrowLeft, Send, AlertCircle } from "lucide-react";
+import { Check, Upload, ImagePlus, FileText, ArrowRight, ArrowLeft, Send, AlertCircle, Loader2 } from "lucide-react";
 import PageHeader from "@/components/admin/PageHeader";
 import StatusPill from "@/components/admin/StatusPill";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 
 const STEPS = [
   { id: 1, label: "Información básica" },
@@ -55,13 +56,18 @@ export default function NuevaPropiedad() {
 
   // Step 2
   const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [tour, setTour] = useState("");
 
   // Step 3
-  const [docs, setDocs] = useState<Record<string, boolean>>({});
+  const [docs, setDocs] = useState<Record<string, string>>({});
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const docTypeRef = useRef<string>("");
 
   const step2Valid = photos.length >= 4;
-  const step3Valid = REQUIRED_DOCS.every((d) => docs[d]);
+  const step3Valid = REQUIRED_DOCS.every((d) => !!docs[d]);
 
   const next = () => {
     if (step === 1) {
@@ -97,33 +103,75 @@ export default function NuevaPropiedad() {
     setStep((s) => Math.min(4, s + 1));
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setUploadingPhotos(true);
+    try {
+      const newPhotos = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`El archivo ${file.name} supera los 10MB`);
+          continue;
+        }
+        const fileRef = ref(storage, `properties_temp/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        newPhotos.push(url);
+      }
+      setPhotos((p) => [...p, ...newPhotos].slice(0, 20));
+      toast.success("Fotos subidas exitosamente");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al subir fotos");
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const docType = docTypeRef.current;
+    if (!docType) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`El archivo supera los 10MB`);
+      return;
+    }
+
+    setUploadingDoc(docType);
+    try {
+      const fileRef = ref(storage, `properties_temp/docs/${Date.now()}_${file.name}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      setDocs((prev) => ({ ...prev, [docType]: url }));
+      toast.success("Documento subido exitosamente");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al subir documento");
+    } finally {
+      setUploadingDoc(null);
+    }
+  };
+
+  const triggerDocUpload = (docType: string) => {
+    docTypeRef.current = docType;
+    docInputRef.current?.click();
+  };
+
   const submit = async () => {
     try {
-      const defaultGallery = [
-        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80",
-      ];
-
-      const newProperty = {
-        name,
-        developer: {
-          name: developer,
-          verified: true,
-          projects: 3,
-        },
-        description,
-        type,
-        location: `${sector || "Sin sector"}, ${province}`,
-        totalPrice,
-        totalFractions: fractions,
-        fractionsSold: 0,
         pricePerFraction: fractionPrice,
         roiAnnual: roi,
         monthlyIncomeEstimate: monthlyRent,
-        image: defaultGallery[0],
-        gallery: defaultGallery,
+        image: photos.length > 0 ? photos[0] : "",
+        gallery: photos,
+        documents: docs,
+        tourUrl: tour,
         amenities: ["Piscina", "Gimnasio", "Seguridad 24/7", "Vista al mar"],
         status: "disponible",
         daysLeft: 30,
@@ -288,12 +336,26 @@ export default function NuevaPropiedad() {
               <p className="text-xs text-muted-foreground mt-1">Mínimo 4 fotos · máximo 20 · la primera será la portada</p>
             </div>
 
+            <input
+              type="file"
+              ref={photoInputRef}
+              onChange={handlePhotoUpload}
+              multiple
+              accept="image/jpeg, image/png, image/webp"
+              className="hidden"
+            />
             <div
               className="border-2 border-dashed border-border rounded-lg p-10 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
-              onClick={() => setPhotos((p) => [...p, `photo-${p.length + 1}`].slice(0, 20))}
+              onClick={() => photoInputRef.current?.click()}
             >
-              <ImagePlus className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-              <div className="text-sm font-medium">Arrastra fotos aquí o haz clic para subir</div>
+              {uploadingPhotos ? (
+                <Loader2 className="h-10 w-10 mx-auto text-primary animate-spin mb-3" />
+              ) : (
+                <ImagePlus className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              )}
+              <div className="text-sm font-medium">
+                {uploadingPhotos ? "Subiendo fotos..." : "Arrastra fotos aquí o haz clic para subir"}
+              </div>
               <div className="text-xs text-muted-foreground mt-1">JPG, PNG hasta 10MB · Recomendado 1920×1080</div>
             </div>
 
@@ -306,10 +368,10 @@ export default function NuevaPropiedad() {
                         <StatusPill tone="gold">Portada</StatusPill>
                       </div>
                     )}
-                    <ImagePlus className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground/40" />
+                    <img src={p} alt={`Foto ${i + 1}`} className="absolute inset-0 w-full h-full object-cover" />
                     <button
                       onClick={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}
-                      className="absolute inset-0 bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium"
+                      className="absolute inset-0 bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-medium z-20"
                     >
                       Eliminar
                     </button>
@@ -331,26 +393,36 @@ export default function NuevaPropiedad() {
               <p className="text-xs text-muted-foreground mt-1">Sube cada documento en PDF · máx 10MB cada uno</p>
             </div>
 
+            <input
+              type="file"
+              ref={docInputRef}
+              onChange={handleDocUpload}
+              accept="application/pdf"
+              className="hidden"
+            />
             <div className="space-y-2">
               {REQUIRED_DOCS.map((d) => {
-                const uploaded = docs[d];
+                const uploaded = !!docs[d];
+                const isUploading = uploadingDoc === d;
                 return (
                   <div key={d} className={cn("flex items-center gap-3 p-3 rounded-md border transition-colors", uploaded ? "border-success/40 bg-success/5" : "border-border hover:border-border-strong")}>
                     <div className={cn("h-8 w-8 rounded-md flex items-center justify-center shrink-0", uploaded ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>
-                      {uploaded ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : uploaded ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-medium">{d}</div>
-                      <div className="text-[11px] text-muted-foreground">{uploaded ? "documento.pdf · 1.2 MB" : "Pendiente · PDF requerido"}</div>
+                      <div className="text-[11px] text-muted-foreground">{uploaded ? "Documento subido" : "Pendiente · PDF requerido"}</div>
                     </div>
                     <button
-                      onClick={() => setDocs((prev) => ({ ...prev, [d]: !prev[d] }))}
+                      disabled={isUploading}
+                      onClick={() => triggerDocUpload(d)}
                       className={cn(
                         "h-8 px-3 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition-colors",
                         uploaded ? "bg-muted hover:bg-muted/70 text-muted-foreground" : "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20",
+                        isUploading && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      {uploaded ? "Reemplazar" : <><Upload className="h-3.5 w-3.5" /> Subir</>}
+                      {isUploading ? "Subiendo..." : uploaded ? "Reemplazar" : <><Upload className="h-3.5 w-3.5" /> Subir</>}
                     </button>
                   </div>
                 );
