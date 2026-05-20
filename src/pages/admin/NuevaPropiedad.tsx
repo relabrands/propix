@@ -165,6 +165,19 @@ export default function NuevaPropiedad() {
 
   const submit = async () => {
     try {
+      const newProperty = {
+        name,
+        developer: {
+          name: developer,
+          verified: true,
+          projects: 3,
+        },
+        description,
+        type,
+        location: `${sector || "Sin sector"}, ${province}`,
+        totalPrice,
+        totalFractions: fractions,
+        fractionsSold: 0,
         pricePerFraction: fractionPrice,
         roiAnnual: roi,
         monthlyIncomeEstimate: monthlyRent,
