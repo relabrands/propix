@@ -60,14 +60,31 @@ export default function NuevaPropiedad() {
   // Step 3
   const [docs, setDocs] = useState<Record<string, boolean>>({});
 
-  const step1Valid = name.length > 3 && developer.length > 2 && description.length > 20 && totalPrice > 0 && fractions > 0;
   const step2Valid = photos.length >= 4;
   const step3Valid = REQUIRED_DOCS.every((d) => docs[d]);
 
   const next = () => {
-    if (step === 1 && !step1Valid) {
-      toast.error("Completa los campos requeridos", { description: "Faltan datos básicos del proyecto." });
-      return;
+    if (step === 1) {
+      if (name.length <= 3) {
+        toast.error("Nombre muy corto", { description: "El nombre del proyecto debe tener más de 3 caracteres." });
+        return;
+      }
+      if (developer.length <= 2) {
+        toast.error("Desarrolladora inválida", { description: "El nombre de la desarrolladora es muy corto." });
+        return;
+      }
+      if (description.length <= 10) {
+        toast.error("Descripción muy corta", { description: "La descripción debe tener al menos 10 caracteres." });
+        return;
+      }
+      if (!sector) {
+        toast.error("Sector requerido", { description: "Debes especificar el sector de la propiedad." });
+        return;
+      }
+      if (totalPrice <= 0 || fractions <= 0) {
+        toast.error("Datos financieros inválidos", { description: "El precio total y el número de fracciones deben ser mayores a 0." });
+        return;
+      }
     }
     if (step === 2 && !step2Valid) {
       toast.error("Sube al menos 4 fotos", { description: "Las propiedades necesitan fotos para publicarse." });
