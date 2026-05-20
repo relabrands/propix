@@ -5,9 +5,11 @@ import { formatDateEs, formatUSD } from "@/lib/format";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/store/useAppStore";
-import { collection, onSnapshot, query as fsQuery, where, addDoc, doc, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, addDoc, doc, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { motion } from "framer-motion";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 const filters = ["Todos", "Recibidos", "Retirados"] as const;
 
@@ -35,12 +37,11 @@ interface Transaction {
 export default function Pagos() {
   const currentUser = useAppStore((s) => s.user);
   const [filter, setFilter] = useState<typeof filters[number]>("Todos");
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Modals state
   const [showAddBank, setShowAddBank] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(false);
 
   // Form states
   const [bankName, setBankName] = useState("");
@@ -48,27 +49,14 @@ export default function Pagos() {
   const [accountType, setAccountType] = useState("Ahorros");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [selectedBankId, setSelectedBankId] = useState("");
+  
+  // Deposit form state
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositFile, setDepositFile] = useState<File | null>(null);
+  const [uploadingDeposit, setUploadingDeposit] = useState(false);
 
-  useEffect(() => {
-    if (!currentUser?.uid) {
-      setLoading(false);
-      return;
-    }
-
-    // Subscribe to user transactions
-    const qTx = fsQuery(collection(db, "transactions"), where("userId", "==", currentUser.uid));
-    const unsubscribeTx = onSnapshot(qTx, (snapshot) => {
-      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as unknown as Transaction[];
-      // Sort client side by date descending
-      data.sort((a: Transaction, b: Transaction) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setTransactions(data);
-      setLoading(false);
-    });
-
-    return () => {
-      unsubscribeTx();
-    };
-  }, [currentUser?.uid]);
+  // Use new wallet balance hook
+  const { balance: availableBalance, transactions, loading } = useWalletBalance(currentUser?.uid);
 
   // Load bank accounts from user doc
   const userBankAccounts: BankAccount[] = currentUser?.bankAccounts || [];
@@ -76,21 +64,9 @@ export default function Pagos() {
   // Filters mapping
   const filtered = transactions.filter((t) => {
     if (filter === "Todos") return true;
-    if (filter === "Recibidos") return t.type === "Distribución";
+    if (filter === "Recibidos") return t.type === "Distribución" || t.type === "Depósito";
     return t.type === "Retiro" || t.type === "Inversión";
   });
-
-  // Calculate withdrawable balance
-  // We can let them withdraw up to their monthly income or accumulated distributions
-  const totalEarned = transactions
-    .filter((t) => t.type === "Distribución" && t.status === "Completada")
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-  const totalWithdrawn = transactions
-    .filter((t) => t.type === "Retiro" && (t.status === "Completada" || t.status === "Pendiente"))
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-  const availableBalance = Math.max(0, totalEarned - totalWithdrawn);
 
   const handleAddBank = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,6 +165,56 @@ export default function Pagos() {
     }
   };
 
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser?.uid) return;
+
+    const amountNum = parseFloat(depositAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error("Por favor ingresa un monto válido");
+      return;
+    }
+
+    if (!depositFile) {
+      toast.error("Por favor sube el comprobante de transferencia");
+      return;
+    }
+
+    try {
+      setUploadingDeposit(true);
+
+      // Clean filename
+      const safeFilename = depositFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const storageRef = ref(storage, `deposits/${currentUser.uid}/${Date.now()}_${safeFilename}`);
+      await uploadBytes(storageRef, depositFile);
+      const url = await getDownloadURL(storageRef);
+
+      // Add deposit transaction
+      await addDoc(collection(db, "transactions"), {
+        userId: currentUser.uid,
+        investor: currentUser.name || currentUser.email,
+        property: "Recarga de Billetera",
+        type: "Depósito",
+        amount: amountNum,
+        fee: 0,
+        method: "Transferencia Bancaria",
+        status: "Pendiente",
+        date: new Date().toISOString(),
+        receiptUrl: url
+      });
+
+      toast.success("Depósito reportado. En revisión por administración.");
+      setShowDeposit(false);
+      setDepositAmount("");
+      setDepositFile(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al procesar el depósito");
+    } finally {
+      setUploadingDeposit(false);
+    }
+  };
+
   return (
     <div className="pb-4">
       <ScreenHeader title="Pagos" subtitle="Cuentas y transacciones" />
@@ -202,23 +228,31 @@ export default function Pagos() {
           <div className="flex-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Balance Disponible</p>
             <p className="text-xl font-bold font-mono mt-0.5">{formatUSD(availableBalance)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Ingresos acumulados listos para retirar.</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Fondos listos para invertir o retirar.</p>
           </div>
-          {availableBalance > 0 && (
+          <div className="flex flex-col gap-2 shrink-0">
             <button
-              onClick={() => {
-                if (userBankAccounts.length === 0) {
-                  toast.error("Por favor agrega una cuenta bancaria primero");
-                  return;
-                }
-                setSelectedBankId(userBankAccounts[0].id);
-                setShowWithdraw(true);
-              }}
-              className="h-9 px-4 rounded-xl bg-gradient-gold text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition"
+              onClick={() => setShowDeposit(true)}
+              className="h-9 px-4 rounded-xl bg-gradient-gold text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition shadow-gold"
             >
-              Retirar
+              Depositar
             </button>
-          )}
+            {availableBalance > 0 && (
+              <button
+                onClick={() => {
+                  if (userBankAccounts.length === 0) {
+                    toast.error("Por favor agrega una cuenta bancaria primero");
+                    return;
+                  }
+                  setSelectedBankId(userBankAccounts[0].id);
+                  setShowWithdraw(true);
+                }}
+                className="h-9 px-4 rounded-xl bg-white/5 border border-border text-xs font-semibold hover:bg-white/10 active:scale-[0.98] transition"
+              >
+                Retirar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Bank accounts */}
@@ -302,10 +336,10 @@ export default function Pagos() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {isInvestment ? `Inversión: ${t.property}` : isReceived ? `Distribución: ${t.property}` : t.property || "Retiro de fondos"}
+                        {isInvestment ? `Inversión: ${t.property}` : isReceived ? `${t.type}: ${t.property}` : t.property || "Retiro de fondos"}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {t.date ? formatDateEs(t.date) : ""} · <span className="capitalize">{t.status}</span>
+                        {t.date ? formatDateEs(t.date) : ""} · <span className={t.status === "Pendiente" ? "text-warning" : ""}>{t.status}</span>
                       </p>
                     </div>
                     <p
@@ -462,6 +496,92 @@ export default function Pagos() {
                 className="w-full h-12 rounded-xl bg-gradient-gold text-primary-foreground font-semibold text-sm active:scale-[0.98] transition mt-2"
               >
                 Confirmar Retiro
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Deposit Modal */}
+      {showDeposit && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            className="w-full max-w-md glass-strong rounded-t-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-xl">Recargar Balance</h3>
+              <button onClick={() => setShowDeposit(false)} className="h-8 w-8 rounded-full glass grid place-items-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+              <p className="text-sm font-medium text-primary">Instrucciones de Transferencia</p>
+              <p className="text-xs text-muted-foreground">Para recargar tu balance, transfiere a la siguiente cuenta y sube tu comprobante. Nuestro equipo lo verificará en breve.</p>
+              
+              <div className="mt-3 p-3 bg-black/20 rounded-xl space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Banco:</span>
+                  <span className="font-semibold">Banco Popular</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Titular:</span>
+                  <span className="font-semibold">Propix SRL</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tipo de cuenta:</span>
+                  <span className="font-semibold">Corriente</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Moneda:</span>
+                  <span className="font-semibold">Dólares (USD)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cuenta:</span>
+                  <span className="font-semibold text-primary">123-456789-0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cédula / RNC:</span>
+                  <span className="font-semibold">1-32-45678-9</span>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleDeposit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground uppercase font-semibold">Monto Transferido (USD Equivalent)</label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="Ej. 1000"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  required
+                  className="w-full h-12 px-4 rounded-xl bg-white/5 border border-border focus:border-primary text-sm focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground uppercase font-semibold">Comprobante (Foto o PDF)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setDepositFile(e.target.files?.[0] || null)}
+                    required
+                    className="w-full h-12 px-4 py-3 rounded-xl bg-white/5 border border-border focus:border-primary text-sm focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={uploadingDeposit}
+                className="w-full h-12 rounded-xl bg-gradient-gold text-primary-foreground font-semibold text-sm active:scale-[0.98] transition mt-2 disabled:opacity-50 flex items-center justify-center"
+              >
+                {uploadingDeposit ? "Procesando..." : "Enviar Comprobante"}
               </button>
             </form>
           </motion.div>

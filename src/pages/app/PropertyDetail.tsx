@@ -5,7 +5,7 @@ import ScreenHeader from "@/components/ScreenHeader";
 import ProgressBar from "@/components/ProgressBar";
 import EmptyState from "@/components/EmptyState";
 import { formatPct, formatUSD } from "@/lib/format";
-import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users } from "lucide-react";
+import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import InvestSheet from "@/components/InvestSheet";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
@@ -21,6 +21,10 @@ export default function PropertyDetail() {
   const [imgIdx, setImgIdx] = useState(0);
   const [amount, setAmount] = useState(1);
   const [open, setOpen] = useState(false);
+
+  // Slider touch states
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const currentUser = useAppStore((s) => s.user);
   const kycStatus = currentUser?.kycStatus || "pending";
@@ -45,6 +49,26 @@ export default function PropertyDetail() {
       return;
     }
 
+    // Check what profile/doc fields are missing to show context-sensitive error
+    const missingProfile = !currentUser?.cedula || !currentUser?.nationality || !currentUser?.profession || !currentUser?.economicActivity || !currentUser?.fundsSource;
+    const missingDocs = !currentUser?.cedulaUrl || !currentUser?.selfieUrl || !currentUser?.addressUrl || !currentUser?.incomeUrl;
+
+    if (missingProfile) {
+      toast.error("Falta Información Personal", {
+        description: "Haz clic en Perfil -> Información Personal para completarla.",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (missingDocs) {
+      toast.error("Faltan Documentos KYC", {
+        description: "Haz clic en Perfil -> Documentos KYC para subirlos.",
+        duration: 5000,
+      });
+      return;
+    }
+
     if (kycStatus === "submitted" || kycStatus === "inReview") {
       toast.error("Tu verificación KYC está en proceso.", {
         description: "Te notificaremos cuando tu perfil haya sido aprobado.",
@@ -52,35 +76,13 @@ export default function PropertyDetail() {
       return;
     }
 
-    if (kycStatus === "pending" || kycStatus === "rejected") {
+    if (kycStatus === "pending" || kycStatus === "rejected" || kycStatus !== "verified") {
       toast.error("Aún tu cuenta no está verificada para invertir.", {
-        description: "Por favor completa tu perfil y espera la aprobación.",
+        description: "Por favor espera a que tu cuenta sea aprobada.",
         duration: 5000,
       });
       return;
     }
-
-    // Check what profile/doc fields are missing to show context-sensitive error
-    const missingDocs = !currentUser?.cedulaUrl || !currentUser?.selfieUrl || !currentUser?.addressUrl || !currentUser?.incomeUrl;
-    const missingProfile = !currentUser?.cedula || !currentUser?.nationality || !currentUser?.profession || !currentUser?.economicActivity || !currentUser?.fundsSource;
-
-    if (missingProfile) {
-      toast.error("Por favor completa tu Información Personal en tu Perfil para poder invertir.", {
-        description: "Haz clic en Perfil -> Información Personal.",
-        duration: 5000,
-      });
-      return;
-    }
-
-    if (missingDocs) {
-      toast.error("Por favor completa la subida de tus Documentos KYC en tu Perfil para poder invertir.", {
-        description: "Haz clic en Perfil -> Documentos KYC.",
-        duration: 5000,
-      });
-      return;
-    }
-
-    toast.error("Debes completar tu perfil y subir tus documentos de identidad antes de poder invertir.");
   };
 
   if (loading) {
@@ -139,32 +141,74 @@ export default function PropertyDetail() {
       />
 
       {/* Hero gallery */}
-      <div className="relative -mt-[68px]">
-        <div className="aspect-[4/3] overflow-hidden">
+      <div 
+        className="relative -mt-[68px]"
+        onTouchStart={(e) => {
+          setTouchEnd(null);
+          setTouchStart(e.targetTouches[0].clientX);
+        }}
+        onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+        onTouchEnd={() => {
+          if (!touchStart || !touchEnd) return;
+          const distance = touchStart - touchEnd;
+          const isLeftSwipe = distance > 50;
+          const isRightSwipe = distance < -50;
+          
+          if (isLeftSwipe) {
+            setImgIdx(prev => (prev === galleryList.length - 1 ? 0 : prev + 1));
+          }
+          if (isRightSwipe) {
+            setImgIdx(prev => (prev === 0 ? galleryList.length - 1 : prev - 1));
+          }
+        }}
+      >
+        <div className="aspect-[4/3] overflow-hidden relative">
           <img
             src={galleryList[imgIdx] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"}
             alt={property.name}
             className="h-full w-full object-cover transition-opacity duration-500"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+          
+          {/* Slider Navigation Buttons */}
+          {galleryList.length > 1 && (
+            <>
+              <button 
+                onClick={() => setImgIdx(prev => (prev === 0 ? galleryList.length - 1 : prev - 1))}
+                className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                aria-label="Anterior foto"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button 
+                onClick={() => setImgIdx(prev => (prev === galleryList.length - 1 ? 0 : prev + 1))}
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-colors"
+                aria-label="Siguiente foto"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
         </div>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {galleryList.map((_, i) => (
+        
+        {/* Indicators - moved up slightly to avoid text overlap */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          {galleryList.length > 1 && galleryList.map((_, i) => (
             <button
               key={i}
               onClick={() => setImgIdx(i)}
               className={`h-1.5 rounded-full transition-all ${
-                i === imgIdx ? "w-6 bg-primary" : "w-2 bg-foreground/30"
+                i === imgIdx ? "w-6 bg-primary" : "w-2 bg-white/50 hover:bg-white/80"
               }`}
             />
           ))}
         </div>
-        <span className="absolute top-20 right-5 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full bg-success/20 text-success border border-success/30 backdrop-blur-md">
+        <span className="absolute top-20 right-5 z-10 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full bg-success/20 text-success border border-success/30 backdrop-blur-md">
           {property.status === "rentando" ? "RENTANDO" : "DISPONIBLE"}
         </span>
       </div>
 
-      <div className="px-5 -mt-8 relative space-y-6">
+      <div className="px-5 -mt-4 relative z-20 space-y-6">
         <div>
           <h1 className="font-display text-4xl leading-tight">{property.name}</h1>
           <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1.5">
@@ -250,7 +294,7 @@ export default function PropertyDetail() {
           </div>
 
           {fractionsSold < totalFractions && (
-            <div className="pt-2">
+            <div className="pt-2 hidden md:block">
               <button
                 onClick={handleInvestClick}
                 className="h-12 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
@@ -278,13 +322,15 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* Map placeholder */}
-        <div className="aspect-[16/9] rounded-2xl glass overflow-hidden relative grid place-items-center">
-          <div className="absolute inset-0 bg-gradient-ocean opacity-60" />
-          <div className="relative text-center">
-            <MapPin className="h-8 w-8 text-primary mx-auto" />
-            <p className="text-xs text-muted-foreground mt-2">{property.location}</p>
-          </div>
+        {/* Map placeholder -> Google Maps Iframe */}
+        <div className="aspect-[16/9] rounded-2xl glass overflow-hidden relative">
+          <iframe 
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(property.location + (property.address ? ", " + property.address : ""))}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+            className="absolute inset-0 w-full h-full border-0"
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
 
         {/* Developer — informational trust badge */}

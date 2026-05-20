@@ -80,8 +80,8 @@ export default function NuevaPropiedad() {
   const docInputRef = useRef<HTMLInputElement>(null);
   const docTypeRef = useRef<string>("");
 
-  const step2Valid = photos.length >= 4;
-  const step3Valid = REQUIRED_DOCS.every((d) => !!docs[d]);
+  const step2Valid = photos.length >= 1;
+  const step3Valid = Object.keys(docs).length > 0;
 
   const next = () => {
     if (step === 1) {
@@ -101,21 +101,17 @@ export default function NuevaPropiedad() {
         toast.error("Sector requerido", { description: "Debes especificar el sector de la propiedad." });
         return;
       }
-      if (!address) {
-        toast.error("Dirección requerida", { description: "Debes especificar la dirección exacta." });
-        return;
-      }
       if (totalPrice <= 0 || fractions <= 0) {
         toast.error("Datos financieros inválidos", { description: "El precio total y el número de fracciones deben ser mayores a 0." });
         return;
       }
     }
     if (step === 2 && !step2Valid) {
-      toast.error("Sube al menos 4 fotos", { description: "Las propiedades necesitan fotos para publicarse." });
+      toast.error("Falta foto", { description: "Sube al menos 1 foto para continuar." });
       return;
     }
     if (step === 3 && !step3Valid) {
-      toast.error("Faltan documentos", { description: "Sube todos los documentos legales requeridos." });
+      toast.error("Faltan documentos", { description: "Sube al menos 1 documento legal para continuar." });
       return;
     }
     setStep((s) => Math.min(4, s + 1));
@@ -214,7 +210,7 @@ export default function NuevaPropiedad() {
       await addDoc(collection(db, "properties"), newProperty);
       setSubmitted(true);
       toast.success("Propiedad publicada", { description: `${name} ya está visible para los inversores.` });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating property:", err);
       toast.error("Error al publicar la propiedad");
     }
@@ -392,7 +388,7 @@ export default function NuevaPropiedad() {
           <div className="space-y-5">
             <div>
               <h3 className="font-display text-xl">Fotos y medios</h3>
-              <p className="text-xs text-muted-foreground mt-1">Mínimo 4 fotos · máximo 20 · la primera será la portada</p>
+              <p className="text-xs text-muted-foreground mt-1">Mínimo 1 foto · máximo 20 · la primera será la portada</p>
             </div>
 
             <input
@@ -449,7 +445,7 @@ export default function NuevaPropiedad() {
           <div className="space-y-5">
             <div>
               <h3 className="font-display text-xl">Documentos legales</h3>
-              <p className="text-xs text-muted-foreground mt-1">Sube cada documento en PDF · máx 10MB cada uno</p>
+              <p className="text-xs text-muted-foreground mt-1">Sube al menos 1 documento en PDF · máx 10MB cada uno</p>
             </div>
 
             <input

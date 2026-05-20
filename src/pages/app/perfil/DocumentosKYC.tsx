@@ -56,8 +56,8 @@ export default function DocumentosKYC() {
       label: "Cédula (frontal y reverso)",
       hint: "JCE — vigente y legible",
       icon: IdCard,
-      status: kycStatus === "verified" ? "verified" : (currentUser?.cedulaUrl ? "review" : "pending"),
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.cedulaUrl ? "Subido" : "—"),
+      status: currentUser?.cedulaUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending",
+      date: currentUser?.cedulaUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       required: true,
       url: currentUser?.cedulaUrl
     },
@@ -66,8 +66,8 @@ export default function DocumentosKYC() {
       label: "Selfie con cédula",
       hint: "Validación biométrica con Veriff",
       icon: ScanFace,
-      status: kycStatus === "verified" ? "verified" : (currentUser?.selfieUrl ? "review" : "pending"),
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.selfieUrl ? "Subido" : "—"),
+      status: currentUser?.selfieUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending",
+      date: currentUser?.selfieUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       required: true,
       url: currentUser?.selfieUrl
     },
@@ -76,8 +76,8 @@ export default function DocumentosKYC() {
       label: "Comprobante de dirección",
       hint: "Factura EDE/CAASD/telefonía no mayor a 3 meses",
       icon: FileCheck2,
-      status: kycStatus === "verified" ? "verified" : (currentUser?.addressUrl ? "review" : "pending"),
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.addressUrl ? "Subido" : "—"),
+      status: currentUser?.addressUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending",
+      date: currentUser?.addressUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       required: true,
       url: currentUser?.addressUrl
     },
@@ -86,8 +86,8 @@ export default function DocumentosKYC() {
       label: "Comprobante de ingresos",
       hint: "Carta de trabajo, últimos 3 estados de cuenta o IR-1/IR-2",
       icon: Receipt,
-      status: kycStatus === "verified" ? "verified" : (currentUser?.incomeUrl ? "review" : "pending"),
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.incomeUrl ? "Subido" : "—"),
+      status: currentUser?.incomeUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending",
+      date: currentUser?.incomeUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       required: true,
       url: currentUser?.incomeUrl
     },
@@ -96,8 +96,8 @@ export default function DocumentosKYC() {
       label: "Certificación bancaria", 
       hint: "Requerido para inversiones > US$10,000", 
       icon: Landmark, 
-      status: kycStatus === "verified" ? "verified" : (currentUser?.bankUrl ? "review" : "pending"), 
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.bankUrl ? "Subido" : "—"),
+      status: currentUser?.bankUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending", 
+      date: currentUser?.bankUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       url: currentUser?.bankUrl
     },
     { 
@@ -105,8 +105,8 @@ export default function DocumentosKYC() {
       label: "Constancia de RNC", 
       hint: "Solo si invertirás como persona jurídica", 
       icon: FileSignature, 
-      status: kycStatus === "verified" ? "verified" : (currentUser?.rncUrl ? "review" : "pending"), 
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.rncUrl ? "Subido" : "—"),
+      status: currentUser?.rncUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending", 
+      date: currentUser?.rncUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       url: currentUser?.rncUrl
     },
     { 
@@ -114,8 +114,8 @@ export default function DocumentosKYC() {
       label: "Declaración PEP / fuente de fondos", 
       hint: "Origen lícito de los recursos (Ley 155-17)", 
       icon: ShieldAlert, 
-      status: kycStatus === "verified" ? "verified" : (currentUser?.pepUrl ? "review" : "pending"), 
-      date: kycStatus === "verified" ? "Verificado" : (currentUser?.pepUrl ? "Subido" : "—"),
+      status: currentUser?.pepUrl ? (kycStatus === "verified" ? "verified" : "review") : "pending", 
+      date: currentUser?.pepUrl ? (kycStatus === "verified" ? "Verificado" : "Subido") : "—",
       url: currentUser?.pepUrl
     },
   ];

@@ -11,7 +11,7 @@ import { collection, onSnapshot, query as fsQuery, orderBy, doc, updateDoc } fro
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
-const TYPES: ("Todos" | TxType)[] = ["Todos", "Inversión", "Distribución", "Retiro", "Fee"];
+const TYPES: ("Todos" | TxType | "Depósito")[] = ["Todos", "Inversión", "Distribución", "Retiro", "Depósito", "Fee"];
 const STATUSES: ("Todos" | TxStatus)[] = ["Todos", "Completada", "Pendiente", "Fallida", "Reembolsada"];
 
 export default function Transacciones() {
@@ -57,7 +57,7 @@ export default function Transacciones() {
     return true;
   });
 
-  const totalMoved = transactions.reduce((s, t) => s + (t.type === "Inversión" || t.type === "Distribución" ? (t.amount || 0) : 0), 0);
+  const totalMoved = transactions.reduce((s, t) => s + (t.type === "Inversión" || t.type === "Distribución" || t.type === "Depósito" ? (t.amount || 0) : 0), 0);
   const totalFees = transactions.reduce((s, t) => s + (t.fee || 0), 0);
   const pendingCount = transactions.filter((t) => t.status === "Pendiente").length;
   const failedCount = transactions.filter((t) => t.status === "Fallida").length;
@@ -132,7 +132,7 @@ export default function Transacciones() {
                     <td className="px-4 py-3 truncate max-w-[140px]">{tx.investor || "Inversor"}</td>
                     <td className="px-4 py-3 text-muted-foreground truncate max-w-[140px]">{tx.property || "—"}</td>
                     <td className="px-4 py-3">
-                      <StatusPill tone={tx.type === "Inversión" ? "gold" : tx.type === "Distribución" ? "teal" : tx.type === "Retiro" ? "muted" : "info"}>
+                      <StatusPill tone={tx.type === "Inversión" ? "gold" : tx.type === "Distribución" ? "teal" : tx.type === "Depósito" ? "success" : tx.type === "Retiro" ? "muted" : "info"}>
                         {tx.type}
                       </StatusPill>
                     </td>
@@ -146,7 +146,16 @@ export default function Transacciones() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button title="Ver" className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center"><Eye className="h-3.5 w-3.5" /></button>
+                        {tx.receiptUrl && (
+                          <a href={tx.receiptUrl} target="_blank" rel="noreferrer" title="Ver comprobante" className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center">
+                            <Eye className="h-3.5 w-3.5" />
+                          </a>
+                        )}
+                        {!tx.receiptUrl && (
+                          <button title="Ver" className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center">
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         {tx.status === "Pendiente" && (
                           <>
                             <button

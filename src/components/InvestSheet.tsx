@@ -4,6 +4,7 @@ import { Check, ChevronRight, CreditCard, Landmark, Minus, Plus, Wallet, X } fro
 import { formatUSD } from "@/lib/format";
 import { Link } from "react-router-dom";
 import { useAppStore } from "@/store/useAppStore";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { doc, collection, addDoc, updateDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentUser = useAppStore((s) => s.user);
+  const { balance } = useWalletBalance(currentUser?.uid);
 
   useEffect(() => {
     if (open) {
@@ -44,6 +46,11 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
       toast.error("Debes iniciar sesión para invertir.");
       return;
     }
+    if (balance < total) {
+      toast.error("Balance insuficiente.", { description: "Por favor recarga tu balance en Pagos." });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const propertyRef = doc(db, "properties", property.id);
@@ -99,16 +106,7 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
         date: new Date().toISOString(),
       });
 
-      // 4. Update user's aggregate portfolios stats
-      const currentInvested = currentUser.totalInvested || 0;
-      const currentProps = currentUser.propertiesCount || 0;
-      const currentIncome = currentUser.monthlyIncome || 0;
-
-      await updateDoc(userRef, {
-        totalInvested: currentInvested + subtotal,
-        propertiesCount: currentProps + 1,
-        monthlyIncome: currentIncome + monthlyIncomeForFractions,
-      });
+      // 4. Update user's aggregate portfolios stats (Legacy, removing because they conflict with KYC data and are calculated dynamically on the fly)
 
       setStep("success");
     } catch (err: unknown) {
@@ -207,31 +205,34 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
 
                 {step === "method" && (
                   <div className="space-y-3">
-                    <MethodTile
-                      icon={<Landmark className="h-5 w-5" />}
-                      title="Transferencia bancaria"
-                      desc="Banreservas, Popular, BHD, Scotia"
-                      selected={method === "bank"}
-                      onClick={() => setMethod("bank")}
-                    />
-                    <MethodTile
-                      icon={<CreditCard className="h-5 w-5" />}
-                      title="Tarjeta de crédito/débito"
-                      desc="Visa, Mastercard · cargo inmediato"
-                      selected={method === "card"}
-                      onClick={() => setMethod("card")}
-                    />
+                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-4">
+                      <p className="text-sm font-medium text-primary">Método de Pago</p>
+                      <p className="text-xs text-muted-foreground mt-1">Para invertir, debes utilizar el Balance Disponible en tu Billetera. Puedes recargarlo desde la sección de Pagos.</p>
+                    </div>
+
                     <MethodTile
                       icon={<Wallet className="h-5 w-5" />}
-                      title="Saldo en wallet"
-                      desc={`Disponible: ${formatUSD(133.2)}`}
+                      title="Saldo en Billetera Propix"
+                      desc={`Disponible: ${formatUSD(balance)}`}
                       selected={method === "wallet"}
                       onClick={() => setMethod("wallet")}
                     />
 
+                    {balance < total && (
+                      <div className="p-3 bg-destructive/10 text-destructive rounded-xl text-xs mt-2 font-medium">
+                        Tu balance actual ({formatUSD(balance)}) es menor al total requerido ({formatUSD(total)}). Por favor recarga en la sección de Pagos.
+                      </div>
+                    )}
+
                     <button
-                      onClick={() => setStep("confirm")}
-                      className="mt-3 h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold"
+                      onClick={() => {
+                        if (balance < total) {
+                          toast.error("Balance insuficiente para continuar.");
+                          return;
+                        }
+                        setStep("confirm");
+                      }}
+                      className="mt-3 h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold disabled:opacity-50"
                     >
                       Continuar
                     </button>
@@ -251,12 +252,8 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                       <div className="border-t border-border pt-3 space-y-2 text-sm">
                         <Row label="Fracciones" value={amount.toString()} />
                         <Row label="Inversión" value={formatUSD(subtotal, { decimals: 0 })} />
-                        <Row
-                          label="Renta mensual est."
-                          value={`+${formatUSD(((property.monthlyIncomeEstimate || 0) / (property.totalFractions || 1)) * amount)}`}
-                          highlight
-                        />
-                        <Row label="Método" value={method === "bank" ? "Transferencia" : method === "card" ? "Tarjeta" : "Wallet"} />
+                        <Row label="Renta mensual est." value={`+${formatUSD(((property.monthlyIncomeEstimate || 0) / (property.totalFractions || 1)) * amount)}`} highlight />
+                        <Row label="Método" value="Billetera Propix" />
                       </div>
                     </div>
 
