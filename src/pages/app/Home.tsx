@@ -82,7 +82,7 @@ export default function Home() {
   const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
   const propertiesCount = new Set(investments.map(inv => inv.propertyId)).size;
   const monthlyIncome = investments.reduce((sum, inv) => sum + (inv.monthlyIncomeEstimate || 0), 0);
-  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12 / totalInvested) : 0.125; // 12.5% default mock
+  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12 / totalInvested) * 100 : 12.5; // 12.5% default mock
 
   // Sum all completed distributions for total earned
   const totalEarned = recentTransactions

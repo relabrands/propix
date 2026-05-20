@@ -9,7 +9,7 @@ import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users, ChevronLeft, C
 import InvestSheet from "@/components/InvestSheet";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query as fsQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import type { Property } from "@/lib/mockData";
@@ -21,6 +21,7 @@ export default function PropertyDetail() {
   const [imgIdx, setImgIdx] = useState(0);
   const [amount, setAmount] = useState(1);
   const [open, setOpen] = useState(false);
+  const [userInvestment, setUserInvestment] = useState<{ fractions: number; amount: number } | null>(null);
 
   // Slider touch states
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -42,6 +43,29 @@ export default function PropertyDetail() {
     });
     return () => unsubscribe();
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !currentUser?.uid) return;
+    const qInv = fsQuery(
+      collection(db, "investments"),
+      where("userId", "==", currentUser.uid),
+      where("propertyId", "==", id)
+    );
+    const unsubInv = onSnapshot(qInv, (snap) => {
+      if (!snap.empty) {
+        let totalFractions = 0;
+        let totalInvested = 0;
+        snap.forEach((d) => {
+          totalFractions += d.data().fractions || 0;
+          totalInvested += d.data().investedAmount || 0;
+        });
+        setUserInvestment({ fractions: totalFractions, amount: totalInvested });
+      } else {
+        setUserInvestment(null);
+      }
+    });
+    return () => unsubInv();
+  }, [id, currentUser?.uid]);
 
   const handleInvestClick = () => {
     if (kycStatus === "verified") {
@@ -368,8 +392,21 @@ export default function PropertyDetail() {
 
       {/* Sticky CTA */}
       {fractionsSold < totalFractions ? (
-        <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
-          <div className="mx-auto max-w-md px-5 pb-3 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent">
+        <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom pointer-events-none">
+          <div className="mx-auto max-w-md px-5 pb-3 pt-6 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-auto">
+            {userInvestment && (
+              <div className="mb-3 px-4 py-3 rounded-2xl glass-strong border-primary/20 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">Tu inversión actual</p>
+                  <p className="text-sm font-semibold text-primary">
+                    {userInvestment.fractions} fracc. ({formatUSD(userInvestment.amount, { decimals: 0 })})
+                  </p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-primary text-xs font-bold">✓</span>
+                </div>
+              </div>
+            )}
             <button
               onClick={handleInvestClick}
               className="h-14 w-full rounded-2xl bg-gradient-gold text-primary-foreground font-semibold shadow-gold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"

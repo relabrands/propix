@@ -83,7 +83,7 @@ export default function Portafolio() {
   // Aggregate stats from real investments
   const totalInvested = investments.reduce((sum, inv) => sum + (inv.investedAmount || 0), 0);
   const monthlyIncome = investments.reduce((sum, inv) => sum + (inv.monthlyIncomeEstimate || 0), 0);
-  const roiAnnual = totalInvested > 0 ? (monthlyIncome * 12) / totalInvested : 0.125;
+  const roiAnnual = totalInvested > 0 ? ((monthlyIncome * 12) / totalInvested) * 100 : 12.5;
 
   const distributions = transactions.filter(
     (t) => t.type === "Distribución" && t.status === "Completada"
@@ -104,12 +104,13 @@ export default function Portafolio() {
     });
     chartData = Object.entries(grouped).map(([month, value]) => ({ month, value }));
   } else {
-    // Fallback/projection chart if no distributions paid yet
-    chartData = [
-      { month: "Mar", value: monthlyIncome * 0.8 },
-      { month: "Abr", value: monthlyIncome * 0.9 },
-      { month: "May", value: monthlyIncome },
-    ];
+    // Fallback/projection chart if no distributions paid yet (12 months forward)
+    const d = new Date();
+    const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    chartData = Array.from({ length: 12 }).map((_, i) => ({
+      month: monthNames[(d.getMonth() + i + 1) % 12], // Next 12 months
+      value: monthlyIncome,
+    }));
   }
 
   // Handle range slice
@@ -138,7 +139,7 @@ export default function Portafolio() {
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs text-muted-foreground">Ganancias mensuales</p>
+                <p className="text-xs text-muted-foreground">Ganancias ({range})</p>
                 <p className="font-mono text-lg">+{formatUSD(filteredChartData.reduce((s, d) => s + d.value, 0))}</p>
               </div>
               <div className="flex gap-1 p-1 rounded-full glass">
