@@ -113,9 +113,17 @@ export default function Portafolio() {
     }));
   }
 
+  const isProjection = distributions.length === 0;
+
   // Handle range slice
-  const filteredChartData =
-    range === "3M" ? chartData.slice(-3) : range === "6M" ? chartData.slice(-6) : chartData;
+  let filteredChartData = chartData;
+  if (range === "3M") {
+    filteredChartData = isProjection ? chartData.slice(0, 3) : chartData.slice(-3);
+  } else if (range === "6M") {
+    filteredChartData = isProjection ? chartData.slice(0, 6) : chartData.slice(-6);
+  } else if (range === "1A") {
+    filteredChartData = isProjection ? chartData.slice(0, 12) : chartData.slice(-12);
+  }
 
   return (
     <div className="pb-4">
@@ -139,7 +147,7 @@ export default function Portafolio() {
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs text-muted-foreground">Ganancias ({range})</p>
+                <p className="text-xs text-muted-foreground">{isProjection ? `Proyecciones de ganancias (${range})` : `Ganancias (${range})`}</p>
                 <p className="font-mono text-lg">+{formatUSD(filteredChartData.reduce((s, d) => s + d.value, 0))}</p>
               </div>
               <div className="flex gap-1 p-1 rounded-full glass">

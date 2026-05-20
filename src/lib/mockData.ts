@@ -28,6 +28,7 @@ export interface Property {
   documents?: { [key: string]: string };
   tourUrl?: string;
   createdAt?: string;
+  returnsStart?: string;
 }
 
 /**

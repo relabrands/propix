@@ -56,7 +56,7 @@ export default function PropertyDetail() {
         let totalFractions = 0;
         let totalInvested = 0;
         snap.forEach((d) => {
-          totalFractions += d.data().fractions || 0;
+          totalFractions += d.data().fractionsCount || 0;
           totalInvested += d.data().investedAmount || 0;
         });
         setUserInvestment({ fractions: totalFractions, amount: totalInvested });
@@ -250,6 +250,11 @@ export default function PropertyDetail() {
             label="Fracciones disponibles"
             value={`${totalFractions - fractionsSold}/${totalFractions}`}
           />
+          {property.returnsStart && (
+            <div className="col-span-2">
+              <Metric label="Inicio de retornos" value={property.returnsStart} accent="gold" />
+            </div>
+          )}
         </div>
 
         {/* Funding */}

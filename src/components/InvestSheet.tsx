@@ -79,7 +79,7 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
       });
 
       // 2. Create investment document
-      const monthlyIncomeForFractions = ((property.monthlyIncomeEstimate || 0) / (property.totalFractions || 1)) * amount;
+      const monthlyIncomeForFractions = (subtotal * ((property.roiAnnual || 0) / 100)) / 12;
       await addDoc(collection(db, "investments"), {
         userId: currentUser.uid,
         propertyId: property.id,

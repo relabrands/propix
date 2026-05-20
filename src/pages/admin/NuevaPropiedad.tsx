@@ -66,6 +66,7 @@ export default function NuevaPropiedad() {
   const [fractions, setFractions] = useState(80);
   const [roi, setRoi] = useState(20);
   const [monthlyRent, setMonthlyRent] = useState(1500);
+  const [returnsStart, setReturnsStart] = useState("Inmediatamente");
   const fractionPrice = fractions > 0 ? totalPrice / fractions : 0;
 
   // Step 2
@@ -203,6 +204,7 @@ export default function NuevaPropiedad() {
         amenities: selectedAmenities,
         status: "disponible",
         daysLeft: 30,
+        returnsStart,
         investorsCount: 0,
         createdAt: new Date().toISOString(),
       };
@@ -244,6 +246,7 @@ export default function NuevaPropiedad() {
                 setSector("");
                 setAddress("");
                 setSelectedAmenities([]);
+                setReturnsStart("Inmediatamente");
                 setPhotos([]);
                 setDocs({});
               }}
@@ -352,6 +355,12 @@ export default function NuevaPropiedad() {
                 </Field>
                 <Field label="Renta mensual estimada (USD)" required full>
                   <input type="number" value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} className="np-input font-mono" />
+                </Field>
+                <Field label="Inicio de retornos" required full>
+                  <select value={returnsStart} onChange={e => setReturnsStart(e.target.value)} className="np-input font-medium">
+                    <option value="Inmediatamente">Inmediatamente</option>
+                    <option value="Al completar fondeo">Al completar fondeo</option>
+                  </select>
                 </Field>
               </div>
             </div>
