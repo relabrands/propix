@@ -32,7 +32,8 @@ service cloud.firestore {
     // Properties collection
     match /properties/{propertyId} {
       allow read: if isAuthed();
-      allow write: if isAdmin();
+      allow update: if isAuthed();
+      allow create, delete: if isAdmin();
     }
 
     // Investments collection

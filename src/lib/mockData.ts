@@ -24,6 +24,10 @@ export interface Property {
   amenities: string[];
   developer: { name: string; verified: boolean; projects: number };
   badge?: "NUEVO" | "ÚLTIMAS FRACCIONES";
+  address?: string;
+  documents?: { [key: string]: string };
+  tourUrl?: string;
+  createdAt?: string;
 }
 
 /**

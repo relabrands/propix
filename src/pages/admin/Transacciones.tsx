@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Download, Eye, Check, RotateCcw, AlertTriangle } from "lucide-react";
+import { Calendar, Download, Eye, Check, RotateCcw, AlertTriangle, X } from "lucide-react";
 import PageHeader from "@/components/admin/PageHeader";
 import StatusPill from "@/components/admin/StatusPill";
 import StatCard from "@/components/admin/StatCard";
@@ -19,6 +19,7 @@ export default function Transacciones() {
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("Todos");
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTx, setSelectedTx] = useState<any | null>(null);
 
   useEffect(() => {
     const q = fsQuery(collection(db, "transactions"), orderBy("date", "desc"));
@@ -146,16 +147,13 @@ export default function Transacciones() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        {tx.receiptUrl && (
-                          <a href={tx.receiptUrl} target="_blank" rel="noreferrer" title="Ver comprobante" className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center">
-                            <Eye className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                        {!tx.receiptUrl && (
-                          <button title="Ver" className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center">
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setSelectedTx(tx)}
+                          title="Ver detalles"
+                          className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
                         {tx.status === "Pendiente" && (
                           <>
                             <button
@@ -183,6 +181,105 @@ export default function Transacciones() {
           </table>
         </div>
       </div>
+
+      {/* Transaction Details Modal */}
+      {selectedTx && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setSelectedTx(null)}>
+          <div
+            className="bg-[hsl(var(--surface-elevated))] border border-border-strong rounded-lg max-w-lg w-full shadow-elevated flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <div>
+                <div className="font-display text-lg">Detalles de Transacción</div>
+                <div className="text-xs text-muted-foreground font-mono">ID: {selectedTx.id}</div>
+              </div>
+              <button onClick={() => setSelectedTx(null)} className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border border-border">
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">Monto</span>
+                  <div className="font-mono text-lg">{formatUSD(selectedTx.amount || 0)}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">Estado</span>
+                  <StatusPill tone={selectedTx.status === "Completada" ? "success" : selectedTx.status === "Pendiente" ? "warning" : selectedTx.status === "Fallida" || selectedTx.status === "Reembolsada" ? "danger" : "muted"}>
+                    {selectedTx.status}
+                  </StatusPill>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between py-2 border-b border-border/50">
+                  <span className="text-muted-foreground">Fecha</span>
+                  <span className="font-mono">{selectedTx.date ? new Date(selectedTx.date).toLocaleString() : "—"}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border/50">
+                  <span className="text-muted-foreground">Inversor</span>
+                  <span className="font-medium">{selectedTx.investor || "—"}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border/50">
+                  <span className="text-muted-foreground">Tipo</span>
+                  <span>{selectedTx.type}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border/50">
+                  <span className="text-muted-foreground">Método</span>
+                  <span>{selectedTx.method || "Transferencia"}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border/50">
+                  <span className="text-muted-foreground">Concepto</span>
+                  <span>{selectedTx.property || "—"}</span>
+                </div>
+              </div>
+
+              {selectedTx.receiptUrl && (
+                <div className="pt-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Comprobante</h4>
+                  <a
+                    href={selectedTx.receiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-colors group"
+                  >
+                    <Eye className="h-6 w-6 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
+                    <span className="text-sm font-medium">Ver comprobante adjunto</span>
+                    <span className="text-xs text-muted-foreground mt-1">Se abrirá en una nueva pestaña</span>
+                  </a>
+                </div>
+              )}
+
+              {selectedTx.status === "Pendiente" && (
+                <div className="flex gap-3 pt-4 border-t border-border">
+                  <button
+                    onClick={() => {
+                      handleComplete(selectedTx.id);
+                      setSelectedTx(null);
+                    }}
+                    className="flex-1 bg-success hover:bg-success/90 text-success-foreground h-10 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Check className="h-4 w-4" /> Aprobar
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRefund(selectedTx.id);
+                      setSelectedTx(null);
+                    }}
+                    className="flex-1 bg-destructive/10 hover:bg-destructive/20 text-destructive h-10 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Rechazar / Reembolsar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
