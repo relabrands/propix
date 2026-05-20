@@ -5,7 +5,7 @@ import { formatDateEs, formatUSD } from "@/lib/format";
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/store/useAppStore";
-import { collection, onSnapshot, query as fsQuery, where, addDoc, doc, updateDoc, setDoc, arrayUnion } from "firebase/firestore";
+import { collection, onSnapshot, query as fsQuery, where, addDoc, doc, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
 
@@ -133,6 +133,20 @@ export default function Pagos() {
     }
   };
 
+  const handleDeleteBank = async (bankToDelete: BankAccount) => {
+    if (!currentUser?.uid) return;
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await setDoc(userRef, {
+        bankAccounts: arrayRemove(bankToDelete),
+      }, { merge: true });
+      toast.success("Cuenta eliminada");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al eliminar la cuenta");
+    }
+  };
+
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = parseFloat(withdrawAmount);
@@ -235,6 +249,13 @@ export default function Pagos() {
                   ) : (
                     <span className="text-[10px] text-warning bg-warning/15 px-2 py-1 rounded-full font-medium">Pendiente</span>
                   )}
+                  <button
+                    onClick={() => handleDeleteBank(b)}
+                    className="ml-2 h-8 w-8 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex items-center justify-center transition-colors"
+                    title="Eliminar cuenta"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               ))
             ) : (

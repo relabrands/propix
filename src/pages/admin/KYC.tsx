@@ -39,10 +39,10 @@ export default function KYC() {
           investor: u.name || "Sin nombre",
           initials,
           submittedAt: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "Recientemente",
-          cedula: !!u.cedulaUrl || !!u.cedulaUploaded,
-          selfie: !!u.selfieUrl || !!u.selfieUploaded,
-          address: !!u.addressUrl || !!u.addressUploaded,
-          income: !!u.incomeUrl || !!u.incomeUploaded,
+          cedula: !!u.cedulaUrl,
+          selfie: !!u.selfieUrl,
+          address: !!u.addressUrl,
+          income: !!u.incomeUrl,
           kycStatus: u.kycStatus || "pending",
           email: u.email || "",
           phone: u.phone || "",
@@ -178,9 +178,9 @@ export default function KYC() {
                       <DocChip ok={item.selfie}><Camera className="h-3 w-3" /> Selfie</DocChip>
                       <DocChip ok={item.address}><FileText className="h-3 w-3" /> Dirección</DocChip>
                       <DocChip ok={item.income}><FileText className="h-3 w-3" /> Ingresos</DocChip>
-                      {(item.userDoc.bankUrl || item.userDoc.bankUploaded) && <DocChip ok={true}><FileText className="h-3 w-3" /> Banco</DocChip>}
-                      {(item.userDoc.rncUrl || item.userDoc.rncUploaded) && <DocChip ok={true}><FileText className="h-3 w-3" /> RNC</DocChip>}
-                      {(item.userDoc.pepUrl || item.userDoc.pepUploaded) && <DocChip ok={true}><FileText className="h-3 w-3" /> PEP</DocChip>}
+                      {item.userDoc.bankUrl && <DocChip ok={true}><FileText className="h-3 w-3" /> Banco</DocChip>}
+                      {item.userDoc.rncUrl && <DocChip ok={true}><FileText className="h-3 w-3" /> RNC</DocChip>}
+                      {item.userDoc.pepUrl && <DocChip ok={true}><FileText className="h-3 w-3" /> PEP</DocChip>}
                     </div>
                     {item.kycStatus === "verified" ? (
                       <div className="mt-3">
@@ -219,15 +219,15 @@ export default function KYC() {
               </button>
             </div>
 
-            <div className="p-5 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="p-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {[
-                { label: "Cédula", ok: open.cedula, url: open.userDoc.cedulaUrl },
-                { label: "Selfie", ok: open.selfie, url: open.userDoc.selfieUrl },
-                { label: "Dirección", ok: open.address, url: open.userDoc.addressUrl },
-                { label: "Ingresos", ok: open.income, url: open.userDoc.incomeUrl },
-                { label: "Banco", ok: !!open.userDoc.bankUrl || !!open.userDoc.bankUploaded, url: open.userDoc.bankUrl },
-                { label: "RNC", ok: !!open.userDoc.rncUrl || !!open.userDoc.rncUploaded, url: open.userDoc.rncUrl },
-                { label: "PEP", ok: !!open.userDoc.pepUrl || !!open.userDoc.pepUploaded, url: open.userDoc.pepUrl }
+                { label: "Cédula", ok: !!open.userDoc.cedulaUrl, url: open.userDoc.cedulaUrl },
+                { label: "Selfie", ok: !!open.userDoc.selfieUrl, url: open.userDoc.selfieUrl },
+                { label: "Dirección", ok: !!open.userDoc.addressUrl, url: open.userDoc.addressUrl },
+                { label: "Ingresos", ok: !!open.userDoc.incomeUrl, url: open.userDoc.incomeUrl },
+                { label: "Banco", ok: !!open.userDoc.bankUrl, url: open.userDoc.bankUrl },
+                { label: "RNC", ok: !!open.userDoc.rncUrl, url: open.userDoc.rncUrl },
+                { label: "PEP", ok: !!open.userDoc.pepUrl, url: open.userDoc.pepUrl }
               ].map((doc) => {
                 const isPdf = doc.url && (doc.url.toLowerCase().includes(".pdf") || doc.url.toLowerCase().includes("%2fpdf"));
                 return (
