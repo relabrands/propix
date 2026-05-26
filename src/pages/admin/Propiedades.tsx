@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Eye, Pencil, Pause, Archive, Filter } from "lucide-react";
+import { toast } from "sonner";
 import PageHeader from "@/components/admin/PageHeader";
 import StatusPill from "@/components/admin/StatusPill";
 import { type AdminPropertyStatus } from "@/lib/adminMockData";
 import { formatUSD, formatPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { collection, onSnapshot, query as fsQuery, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query as fsQuery, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const FILTERS: ("Todas" | AdminPropertyStatus)[] = ["Todas", "Activa", "En fondeo", "Cerrada", "Archivada"];
@@ -170,10 +171,17 @@ export default function Propiedades() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <IconBtn label="Ver"><Eye className="h-3.5 w-3.5" /></IconBtn>
-                          <IconBtn label="Editar"><Pencil className="h-3.5 w-3.5" /></IconBtn>
-                          <IconBtn label="Pausar"><Pause className="h-3.5 w-3.5" /></IconBtn>
-                          <IconBtn label="Archivar"><Archive className="h-3.5 w-3.5" /></IconBtn>
+                          <IconBtn label="Ver" to={`/app/propiedad/${p.id}`}><Eye className="h-3.5 w-3.5" /></IconBtn>
+                          <IconBtn label="Editar" onClick={() => toast.info("Edición en desarrollo")}><Pencil className="h-3.5 w-3.5" /></IconBtn>
+                          <IconBtn label="Pausar" onClick={() => toast.info("Pausa en desarrollo")}><Pause className="h-3.5 w-3.5" /></IconBtn>
+                          <IconBtn label="Archivar" onClick={async () => {
+                            try {
+                              await updateDoc(doc(db, "properties", p.id), { status: "archivada" });
+                              toast.success("Propiedad archivada");
+                            } catch (error) {
+                              toast.error("Error al archivar");
+                            }
+                          }}><Archive className="h-3.5 w-3.5" /></IconBtn>
                         </div>
                       </td>
                     </tr>
@@ -189,9 +197,17 @@ export default function Propiedades() {
   );
 }
 
-function IconBtn({ children, label }: { children: React.ReactNode; label: string }) {
+function IconBtn({ children, label, onClick, to }: { children: React.ReactNode; label: string; onClick?: () => void; to?: string }) {
+  const className = "h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center";
+  if (to) {
+    return (
+      <Link to={to} title={label} className={className}>
+        {children}
+      </Link>
+    );
+  }
   return (
-    <button title={label} className="h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center">
+    <button onClick={onClick} title={label} className={className}>
       {children}
     </button>
   );

@@ -3,17 +3,36 @@ import { Send, Upload, Download, Check, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/admin/PageHeader";
 import StatusPill from "@/components/admin/StatusPill";
-import { rentReports, activeProjectsForReport } from "@/lib/devMockData";
+import { rentReports } from "@/lib/devMockData";
+import { collection, query as fsQuery, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { formatUSD } from "@/lib/format";
 
 export default function Distribuciones() {
-  const [projectId, setProjectId] = useState(activeProjectsForReport[0]?.id ?? "");
+  const [activeProjects, setActiveProjects] = useState<{ id: string; name: string; developer: string }[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [gross, setGross] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [hasReceipt, setHasReceipt] = useState(false);
   const net = gross - expenses;
-  const project = activeProjectsForReport.find((p) => p.id === projectId);
+  const project = activeProjects.find((p) => p.id === projectId);
   const currentMonth = "Abril 2026";
+
+  useEffect(() => {
+    const q = fsQuery(collection(db, "properties"), where("status", "==", "rentando"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+        developer: doc.data().developer?.name || "Desarrolladora"
+      }));
+      setActiveProjects(data);
+      if (data.length > 0 && !projectId) {
+        setProjectId(data[0].id);
+      }
+    });
+    return () => unsubscribe();
+  }, [projectId]);
 
   const submit = () => {
     if (!project) {
@@ -58,13 +77,13 @@ export default function Distribuciones() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">Proyecto</label>
-            {activeProjectsForReport.length > 0 ? (
+            {activeProjects.length > 0 ? (
               <select
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
                 className="w-full h-10 rounded-md bg-background border border-border px-3 text-sm focus:outline-none focus:border-primary/50"
               >
-                {activeProjectsForReport.map((p) => (
+                {activeProjects.map((p) => (
                   <option key={p.id} value={p.id}>{p.name} — {p.developer}</option>
                 ))}
               </select>
