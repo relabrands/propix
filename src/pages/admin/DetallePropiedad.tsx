@@ -32,13 +32,21 @@ export default function AdminDetallePropiedad() {
         // The mock data currently stores the property name as a string in tx.property
         const q = query(
           collection(db, "transactions"), 
-          where("property", "==", data.name || ""),
-          orderBy("date", "desc")
+          where("property", "==", data.name || "")
         );
         
         const unsubTx = onSnapshot(q, (txSnap) => {
           const txs = txSnap.docs.map(t => ({ id: t.id, ...t.data() }));
+          // Sort client-side to avoid requiring a composite index in Firestore
+          txs.sort((a: any, b: any) => {
+            const dateA = a.date ? new Date(a.date).getTime() : 0;
+            const dateB = b.date ? new Date(b.date).getTime() : 0;
+            return dateB - dateA;
+          });
           setTransactions(txs);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching transactions:", error);
           setLoading(false);
         });
 
