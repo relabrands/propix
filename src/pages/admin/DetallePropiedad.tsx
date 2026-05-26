@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Edit, Pause, Archive, CheckCircle, Clock, PieChart, 
-  DollarSign, Users, AlertTriangle, Building
+  DollarSign, Users, AlertTriangle, Building, Play, FileText, Download, Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { doc, onSnapshot, collection, query, where, orderBy, updateDoc } from "firebase/firestore";
@@ -103,12 +103,12 @@ export default function AdminDetallePropiedad() {
         actions={
           <>
             <button 
-              onClick={() => toast.info("Edición en desarrollo", { description: "Próximamente podrás editar todos los campos aquí." })}
+              onClick={() => navigate(`/admin/propiedades/editar/${property.id}`)}
               className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border text-sm hover:border-border-strong transition-colors"
             >
               <Edit className="h-4 w-4" /> Editar
             </button>
-            {property.status !== "rentando" && (
+            {property.status !== "rentando" && property.status !== "archivada" && (
               <button 
                 onClick={() => handleUpdateStatus("rentando")}
                 className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border text-sm hover:border-border-strong hover:bg-success/10 hover:text-success transition-colors"
@@ -116,7 +116,15 @@ export default function AdminDetallePropiedad() {
                 <CheckCircle className="h-4 w-4" /> Marcar Rentando
               </button>
             )}
-            {property.status !== "pausada" && (
+            {property.status === "pausada" && (
+              <button 
+                onClick={() => handleUpdateStatus("disponible")}
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border text-sm hover:border-border-strong hover:bg-info/10 hover:text-info transition-colors"
+              >
+                <Play className="h-4 w-4" /> Reanudar
+              </button>
+            )}
+            {property.status !== "pausada" && property.status !== "archivada" && (
               <button 
                 onClick={() => handleUpdateStatus("pausada")}
                 className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border text-sm hover:border-border-strong transition-colors"
@@ -150,7 +158,27 @@ export default function AdminDetallePropiedad() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
-            <h3 className="font-display text-lg mb-4">Métricas Financieras</h3>
+            <h3 className="font-display text-lg mb-4">Información General</h3>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Descripción</p>
+                <p className="text-sm">{property.description || "Sin descripción."}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Dirección</p>
+                  <p className="text-sm">{property.address || "No especificada"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Sector y Provincia</p>
+                  <p className="text-sm">{property.location || "No especificado"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
+            <h3 className="font-display text-lg mb-4">Métricas Financieras y Fechas</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Precio Total</p>
@@ -168,6 +196,55 @@ export default function AdminDetallePropiedad() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Renta Mensual Estimada</p>
                 <p className="font-mono text-lg">{formatUSD(property.monthlyIncomeEstimate, { decimals: 0 })}</p>
               </div>
+              <div className="pt-2 border-t border-border col-span-2 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Inicio de Retornos</p>
+                  <p className="text-sm font-medium">{property.returnsStart || "Inmediatamente"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Fee Mantenimiento Anual</p>
+                  <p className="text-sm font-medium">{property.managementFeeAnnual || 0}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {(property.amenities?.length > 0) && (
+            <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
+              <h3 className="font-display text-lg mb-4">Amenidades</h3>
+              <div className="flex flex-wrap gap-2">
+                {property.amenities.map((am: string) => (
+                  <span key={am} className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium">
+                    {am}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
+            <h3 className="font-display text-lg mb-4">Documentos Legales</h3>
+            <div className="space-y-3">
+              {property.documents && Object.keys(property.documents).length > 0 ? (
+                Object.entries(property.documents).map(([name, url]) => (
+                  <div key={name} className="flex items-center justify-between p-3 rounded-md border border-border bg-background/50 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-primary/10 text-primary rounded-md flex items-center justify-center">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{name}</p>
+                        <p className="text-[10px] text-muted-foreground">PDF Document</p>
+                      </div>
+                    </div>
+                    <a href={url as string} target="_blank" rel="noreferrer" className="h-8 px-3 rounded-md bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center text-xs font-medium transition-colors">
+                      <Download className="h-3.5 w-3.5 mr-1" /> Ver / Descargar
+                    </a>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No hay documentos subidos.</p>
+              )}
             </div>
           </div>
 
@@ -247,6 +324,34 @@ export default function AdminDetallePropiedad() {
               </div>
             </div>
           </div>
+
+          <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-5 space-y-4">
+             <h3 className="font-display text-lg mb-2">Desarrolladora</h3>
+             <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground">
+                  <Building className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{property.developer?.name || "Desconocido"}</p>
+                  {property.developer?.verified && (
+                    <p className="text-[10px] text-success flex items-center gap-1 mt-0.5"><Check className="h-3 w-3" /> Verificada</p>
+                  )}
+                </div>
+             </div>
+          </div>
+
+          {(property.gallery?.length > 1) && (
+            <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
+              <h3 className="font-display text-lg mb-4">Galería Secundaría</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {property.gallery.slice(1).map((img: string, i: number) => (
+                   <div key={i} className="aspect-square bg-muted rounded-md overflow-hidden">
+                     <img src={img} alt="Gallery" className="w-full h-full object-cover" />
+                   </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
