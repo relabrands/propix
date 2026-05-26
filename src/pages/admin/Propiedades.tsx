@@ -171,8 +171,8 @@ export default function Propiedades() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <IconBtn label="Ver" to={`/app/propiedad/${p.id}`}><Eye className="h-3.5 w-3.5" /></IconBtn>
-                          <IconBtn label="Editar" onClick={() => toast.info("Edición en desarrollo")}><Pencil className="h-3.5 w-3.5" /></IconBtn>
+                          <IconBtn label="Ver" to={`/admin/propiedades/${p.id}`}><Eye className="h-3.5 w-3.5" /></IconBtn>
+                          <IconBtn label="Editar" onClick={() => toast.info("Función en desarrollo", { description: "Pronto podrás editar propiedades" })}><Pencil className="h-3.5 w-3.5" /></IconBtn>
                           <IconBtn label="Pausar" onClick={() => toast.info("Pausa en desarrollo")}><Pause className="h-3.5 w-3.5" /></IconBtn>
                           <IconBtn label="Archivar" onClick={async () => {
                             try {
