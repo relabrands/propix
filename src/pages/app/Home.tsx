@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import ScreenHeader from "@/components/ScreenHeader";
 import PropertyCard from "@/components/PropertyCard";
 import EmptyState from "@/components/EmptyState";
-import { formatPct, formatUSD } from "@/lib/format";
-import { ArrowUpRight, Home as HomeIcon, Plus, Sparkles, TrendingUp, AlertCircle, ArrowRight, Clock } from "lucide-react";
+import { formatPct, formatUSD, formatDateEs } from "@/lib/format";
+import { ArrowUpRight, Home as HomeIcon, Plus, Sparkles, TrendingUp, AlertCircle, ArrowRight, Clock, ArrowDownLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/store/useAppStore";
@@ -97,8 +97,19 @@ export default function Home() {
     .filter((t) => t.type === "Distribución" && t.status === "Completada")
     .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-  // Next payment days count
-  const nextPaymentDays = 15;
+  // Next payment days count (pays on the 5th of every month)
+  let nextPaymentDays = 0;
+  if (propertiesCount > 0) {
+    const today = new Date();
+    let nextPaymentDate = new Date(today.getFullYear(), today.getMonth(), 5);
+    
+    if (today.getDate() >= 5) {
+      nextPaymentDate = new Date(today.getFullYear(), today.getMonth() + 1, 5);
+    }
+    
+    const diffTime = nextPaymentDate.getTime() - today.getTime();
+    nextPaymentDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
 
   return (
     <div className="pb-4">
@@ -211,7 +222,7 @@ export default function Home() {
         {/* Quick stats */}
         <section className="grid grid-cols-3 gap-2.5">
           <Stat label="Propiedades" value={propertiesCount.toString()} />
-          <Stat label="Próximo pago" value={`${nextPaymentDays}d`} />
+          <Stat label="Próximo pago" value={propertiesCount > 0 ? `${nextPaymentDays}d` : "—"} />
           <Stat label="Total ganado" value={formatUSD(totalEarned, { decimals: 0 })} />
         </section>
 
@@ -240,46 +251,43 @@ export default function Home() {
           <h2 className="font-display text-2xl mb-3">Actividad reciente</h2>
           {recentTransactions.length > 0 ? (
             <div className="glass rounded-2xl divide-y divide-border">
-              {recentTransactions.slice(0, 5).map((a) => (
-                <div key={a.id} className="flex items-center gap-3 p-4">
-                  <div
-                    className={`h-10 w-10 rounded-xl grid place-items-center ${
-                      a.type === "payment" || a.type === "Distribución"
-                        ? "bg-success/15 text-success"
-                        : a.type === "Inversión"
-                        ? "bg-primary/15 text-primary"
-                        : "bg-secondary/15 text-secondary"
-                    }`}
+              {recentTransactions.slice(0, 5).map((t) => {
+                const isReceived = t.type === "Distribución" || t.type === "Depósito";
+                const isWithdraw = t.type === "Retiro";
+                const isInvestment = t.type === "Inversión";
+
+                return (
+                  <Link 
+                    key={t.id} 
+                    to="/app/pagos"
+                    className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors active:bg-white/10"
                   >
-                    {a.type === "payment" || a.type === "Distribución" ? (
-                      <ArrowUpRight className="h-5 w-5" />
-                    ) : a.type === "Inversión" ? (
-                      <Plus className="h-5 w-5" />
-                    ) : (
-                      <Sparkles className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{a.type === "Inversión" ? `Inversión en ${a.property}` : `Retorno de ${a.property}`}</p>
-                    <p className="text-xs text-muted-foreground truncate">{a.method || "Transferencia"}</p>
-                  </div>
-                  <div className="text-right">
-                    {a.amount > 0 && (
-                      <p
-                        className={`font-mono text-sm ${
-                          a.type === "Distribución" ? "text-success" : "text-foreground"
-                        }`}
-                      >
-                        {a.type === "Distribución" ? "+" : ""}
-                        {formatUSD(a.amount, { decimals: 0 })}
+                    <div
+                      className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${
+                        isReceived ? "bg-success/15 text-success" : isWithdraw ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive"
+                      }`}
+                    >
+                      {isReceived ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {isInvestment ? `Inversión: ${t.property}` : t.type === "Distribución" ? `Distribución: ${t.property}` : t.property || "Retiro de fondos"}
                       </p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {a.date ? new Date(a.date).toLocaleDateString() : "—"}
+                      <p className="text-[11px] text-muted-foreground">
+                        {t.date ? formatDateEs(t.date) : ""} · <span className={t.status === "Pendiente" ? "text-warning" : ""}>{t.status}</span>
+                      </p>
+                    </div>
+                    <p
+                      className={`font-mono text-sm font-semibold shrink-0 ${
+                        isReceived ? "text-success" : isWithdraw ? "text-warning" : "text-destructive"
+                      }`}
+                    >
+                      {isReceived ? "+" : "-"}
+                      {formatUSD(t.amount)}
                     </p>
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <EmptyState
