@@ -16,12 +16,13 @@ const STEPS = [
   { id: 4, label: "Revisar y publicar" },
 ];
 
-const REQUIRED_DOCS = [
-  "Título de propiedad",
-  "Certificado de no deuda",
-  "Planos del proyecto",
-  "Contrato de administración",
-  "Registro mercantil de la desarrolladora",
+export const REQUIRED_DOCS = [
+  { key: "legalCertificacion", label: "Certificación de Estado Jurídico" },
+  { key: "legalContrato", label: "Contrato de Promesa de Venta" },
+  { key: "finProforma", label: "Proforma Financiera" },
+  { key: "finEstudio", label: "Estudio de Mercado (Comps)" },
+  { key: "invTermSheet", label: "Resumen de Condiciones (Term Sheet)" },
+  { key: "invBorrador", label: "Borrador del Contrato" }
 ];
 
 const AMENITIES_LIST = [
@@ -500,7 +501,8 @@ export default function NuevaPropiedad() {
               className="hidden"
             />
             <div className="space-y-2">
-              {REQUIRED_DOCS.map((d) => {
+              {REQUIRED_DOCS.map((docItem) => {
+                const d = docItem.key;
                 const uploaded = !!docs[d];
                 const isUploading = uploadingDoc === d;
                 return (
@@ -509,7 +511,7 @@ export default function NuevaPropiedad() {
                       {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : uploaded ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium">{d}</div>
+                      <div className="text-sm font-medium">{docItem.label}</div>
                       <div className="text-[11px] text-muted-foreground">{uploaded ? "Documento subido" : "Pendiente · PDF requerido"}</div>
                     </div>
                     <button

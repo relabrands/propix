@@ -411,90 +411,54 @@ export default function PropertyDetail() {
             <div className="glass-strong rounded-2xl p-4 border-l-2 border-l-primary/50">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">1. Legal del Inmueble</h4>
               <div className="space-y-2">
-                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
-                      <FileText className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Certificación de Estado Jurídico</p>
-                      <p className="text-[10px] text-muted-foreground">Prueba de propiedad sin cargas ni gravámenes</p>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </button>
-                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
-                      <FileText className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Contrato de Promesa de Venta</p>
-                      <p className="text-[10px] text-muted-foreground">Asegura la adquisición del inmueble</p>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </button>
+                <DocLink 
+                  title="Certificación de Estado Jurídico" 
+                  desc="Prueba de propiedad sin cargas ni gravámenes" 
+                  url={property.documents?.legalCertificacion} 
+                  color="primary" 
+                />
+                <DocLink 
+                  title="Contrato de Promesa de Venta" 
+                  desc="Asegura la adquisición del inmueble" 
+                  url={property.documents?.legalContrato} 
+                  color="primary" 
+                />
               </div>
             </div>
 
             <div className="glass-strong rounded-2xl p-4 border-l-2 border-l-secondary/50">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">2. Financiera</h4>
               <div className="space-y-2">
-                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-secondary/10 grid place-items-center shrink-0">
-                      <FileText className="h-4 w-4 text-secondary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Proforma Financiera</p>
-                      <p className="text-[10px] text-muted-foreground">Desglose de rentabilidad (Business Case)</p>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                </button>
-                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-secondary/10 grid place-items-center shrink-0">
-                      <FileText className="h-4 w-4 text-secondary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Estudio de Mercado (Comps)</p>
-                      <p className="text-[10px] text-muted-foreground">Justificación de ingresos y ocupación</p>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-secondary transition-colors" />
-                </button>
+                <DocLink 
+                  title="Proforma Financiera" 
+                  desc="Desglose de rentabilidad (Business Case)" 
+                  url={property.documents?.finProforma} 
+                  color="secondary" 
+                />
+                <DocLink 
+                  title="Estudio de Mercado (Comps)" 
+                  desc="Justificación de ingresos y ocupación" 
+                  url={property.documents?.finEstudio} 
+                  color="secondary" 
+                />
               </div>
             </div>
 
             <div className="glass-strong rounded-2xl p-4 border-l-2 border-l-emerald-500/50">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">3. La Inversión</h4>
               <div className="space-y-2">
-                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 grid place-items-center shrink-0">
-                      <FileText className="h-4 w-4 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Resumen de Condiciones (Term Sheet)</p>
-                      <p className="text-[10px] text-muted-foreground">Vigencia, pagos y estrategia de salida</p>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500 transition-colors" />
-                </button>
-                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 grid place-items-center shrink-0">
-                      <FileText className="h-4 w-4 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Borrador del Contrato</p>
-                      <p className="text-[10px] text-muted-foreground">Modelo de Asociación en Participación</p>
-                    </div>
-                  </div>
-                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500 transition-colors" />
-                </button>
+                <DocLink 
+                  title="Resumen de Condiciones (Term Sheet)" 
+                  desc="Vigencia, pagos y estrategia de salida" 
+                  url={property.documents?.invTermSheet} 
+                  color="emerald-500" 
+                />
+                <DocLink 
+                  title="Borrador del Contrato" 
+                  desc="Modelo de Asociación en Participación" 
+                  url={property.documents?.invBorrador} 
+                  color="emerald-500" 
+                />
               </div>
             </div>
           </div>
@@ -579,6 +543,66 @@ function Metric(props: MetricProps) {
     <div className="glass rounded-2xl p-4">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={`font-mono text-lg mt-1 ${accent === "teal" ? "text-teal-400" : accent === "gold" ? "text-primary" : "text-foreground"}`}>{value}</p>
+    </div>
+  );
+}
+
+interface DocLinkProps {
+  title: string;
+  desc: string;
+  url?: string;
+  color: string;
+}
+
+function DocLink({ title, desc, url, color }: DocLinkProps) {
+  const isAvailable = !!url;
+  
+  const colorMap = {
+    primary: {
+      bg: "bg-primary/10",
+      text: "text-primary",
+      hover: "group-hover:text-primary"
+    },
+    secondary: {
+      bg: "bg-secondary/10",
+      text: "text-secondary",
+      hover: "group-hover:text-secondary"
+    },
+    "emerald-500": {
+      bg: "bg-emerald-500/10",
+      text: "text-emerald-500",
+      hover: "group-hover:text-emerald-500"
+    }
+  };
+
+  const theme = colorMap[color as keyof typeof colorMap];
+
+  const content = (
+    <>
+      <div className="flex items-center gap-3">
+        <div className={`h-8 w-8 rounded-lg ${theme.bg} grid place-items-center shrink-0`}>
+          <FileText className={`h-4 w-4 ${theme.text}`} />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{title}</p>
+          <p className="text-[10px] text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+      <Download className={`h-4 w-4 ${isAvailable ? `text-muted-foreground ${theme.hover} transition-colors` : 'text-muted-foreground/30'}`} />
+    </>
+  );
+
+  if (isAvailable) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 opacity-50 cursor-not-allowed text-left">
+      {content}
     </div>
   );
 }
