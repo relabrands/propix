@@ -5,7 +5,7 @@ import ScreenHeader from "@/components/ScreenHeader";
 import ProgressBar from "@/components/ProgressBar";
 import EmptyState from "@/components/EmptyState";
 import { formatPct, formatUSD } from "@/lib/format";
-import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users, ChevronLeft, ChevronRight, TrendingUp, FileText, Download, ShieldCheck } from "lucide-react";
 import InvestSheet from "@/components/InvestSheet";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
@@ -396,6 +396,109 @@ export default function PropertyDetail() {
             <span className="text-foreground font-medium">{property.developer.name}</span>
           </div>
         )}
+
+        {/* Legal & Financial Documents */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h3 className="font-display text-xl">Documentos de Respaldo</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Revisa la documentación legal y financiera que valida esta oportunidad de inversión en República Dominicana.
+          </p>
+          
+          <div className="space-y-3">
+            <div className="glass-strong rounded-2xl p-4 border-l-2 border-l-primary/50">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">1. Legal del Inmueble</h4>
+              <div className="space-y-2">
+                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Certificación de Estado Jurídico</p>
+                      <p className="text-[10px] text-muted-foreground">Prueba de propiedad sin cargas ni gravámenes</p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </button>
+                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Contrato de Promesa de Venta</p>
+                      <p className="text-[10px] text-muted-foreground">Asegura la adquisición del inmueble</p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </button>
+              </div>
+            </div>
+
+            <div className="glass-strong rounded-2xl p-4 border-l-2 border-l-secondary/50">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">2. Financiera</h4>
+              <div className="space-y-2">
+                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-secondary/10 grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Proforma Financiera</p>
+                      <p className="text-[10px] text-muted-foreground">Desglose de rentabilidad (Business Case)</p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                </button>
+                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-secondary/10 grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Estudio de Mercado (Comps)</p>
+                      <p className="text-[10px] text-muted-foreground">Justificación de ingresos y ocupación</p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-secondary transition-colors" />
+                </button>
+              </div>
+            </div>
+
+            <div className="glass-strong rounded-2xl p-4 border-l-2 border-l-emerald-500/50">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">3. La Inversión</h4>
+              <div className="space-y-2">
+                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Resumen de Condiciones (Term Sheet)</p>
+                      <p className="text-[10px] text-muted-foreground">Vigencia, pagos y estrategia de salida</p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500 transition-colors" />
+                </button>
+                <button className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Borrador del Contrato</p>
+                      <p className="text-[10px] text-muted-foreground">Modelo de Asociación en Participación</p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-emerald-500 transition-colors" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Recent investors */}
         {recentInvestors.length > 0 && (
