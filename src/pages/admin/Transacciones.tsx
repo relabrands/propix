@@ -262,6 +262,46 @@ export default function Transacciones() {
                   <span className="text-muted-foreground">Concepto</span>
                   <span>{selectedTx.property || "—"}</span>
                 </div>
+
+                {/* Breakdown for Distribución */}
+                {selectedTx.type === "Distribución" && selectedTx.grossShare !== undefined && (
+                  <div className="bg-black/20 p-4 rounded-xl mt-4 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Monto Bruto</span>
+                      <span className="font-mono">{formatUSD(selectedTx.grossShare)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Comisión Admin (5%)</span>
+                      <span className="font-mono text-destructive">-{formatUSD(selectedTx.managementFee)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Retención ISRPF (10%)</span>
+                      <span className="font-mono text-destructive">-{formatUSD(selectedTx.isrpf)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold pt-2 border-t border-border/50">
+                      <span>Monto Neto</span>
+                      <span className="font-mono text-success">{formatUSD(selectedTx.amount)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Breakdown for Inversión */}
+                {selectedTx.type === "Inversión" && selectedTx.fee !== undefined && (
+                  <div className="bg-black/20 p-4 rounded-xl mt-4 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Monto de Inversión</span>
+                      <span className="font-mono">{formatUSD((selectedTx.amount || 0) - selectedTx.fee)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Comisión de Plataforma (Upfront)</span>
+                      <span className="font-mono text-destructive">-{formatUSD(selectedTx.fee)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold pt-2 border-t border-border/50">
+                      <span>Total Invertido</span>
+                      <span className="font-mono text-foreground">-{formatUSD(selectedTx.amount)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {selectedTx.receiptUrl && (
