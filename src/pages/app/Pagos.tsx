@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import ScreenHeader from "@/components/ScreenHeader";
 import EmptyState from "@/components/EmptyState";
-import { formatDateEs, formatUSD } from "@/lib/format";
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Plus, X } from "lucide-react";
+import { formatDateEs, formatUSD, formatPct } from "@/lib/format";
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Plus, X, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/store/useAppStore";
 import { collection, addDoc, doc, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
@@ -62,6 +62,14 @@ export default function Pagos() {
 
   // Use new wallet balance hook
   const { balance: availableBalance, transactions, loading } = useWalletBalance(currentUser?.uid);
+
+  const totalEarned = transactions
+    .filter((t) => t.type === "Distribución" && t.status === "Completada")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalInvestments = transactions
+    .filter((t) => t.type === "Inversión" && t.status === "Completada")
+    .reduce((sum, t) => sum + ((t.amount || 0) - (t.fee || 0)), 0);
+  const growthPct = totalInvestments > 0 ? (totalEarned / totalInvestments) * 100 : 0;
 
   // Load bank accounts from user doc
   const userBankAccounts: BankAccount[] = currentUser?.bankAccounts || [];
@@ -271,7 +279,13 @@ export default function Pagos() {
           <div className="flex-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Balance Disponible</p>
             <p className="text-xl font-bold font-mono mt-0.5">{formatUSD(availableBalance)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Fondos listos para invertir o retirar.</p>
+            {totalEarned > 0 ? (
+              <p className="text-[10px] text-success mt-0.5 font-medium flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" /> +{formatUSD(totalEarned)} (+{formatPct(growthPct)}) histórico
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted-foreground mt-0.5">Fondos listos para invertir o retirar.</p>
+            )}
           </div>
           <div className="flex flex-col gap-2 shrink-0">
             <button
@@ -693,7 +707,24 @@ export default function Pagos() {
                   </div>
                 </>
               )}
-              {selectedTx.fee !== undefined && selectedTx.fee > 0 && selectedTx.type !== "Distribución" && (
+              {selectedTx.type === "Inversión" && selectedTx.fee !== undefined && (
+                <>
+                  <div className="pt-3 pb-1 border-b border-white/5 my-2"></div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">Monto de Inversión</span>
+                    <span className="font-mono">{formatUSD((selectedTx.amount || 0) - selectedTx.fee)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">Comisión de Plataforma (Upfront)</span>
+                    <span className="font-mono text-destructive">-{formatUSD(selectedTx.fee)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] font-medium pt-1">
+                    <span>Total Debitado</span>
+                    <span className="font-mono text-foreground">-{formatUSD(selectedTx.amount)}</span>
+                  </div>
+                </>
+              )}
+              {selectedTx.fee !== undefined && selectedTx.fee > 0 && selectedTx.type !== "Distribución" && selectedTx.type !== "Inversión" && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Comisión</span>
                   <span className="font-mono text-destructive">-{formatUSD(selectedTx.fee)}</span>
