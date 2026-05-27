@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Crown,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
@@ -25,6 +26,7 @@ const NAV = [
   { to: "/admin/inversores", icon: Users, label: "Inversores" },
   { to: "/admin/transacciones", icon: ArrowLeftRight, label: "Transacciones" },
   { to: "/admin/distribuciones", icon: Wallet, label: "Pagos y Distribuciones" },
+  { to: "/admin/contabilidad", icon: BookOpen, label: "Contabilidad" },
   { to: "/admin/kyc", icon: ShieldCheck, label: "KYC / Verificaciones" },
   { to: "/admin/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/admin/configuracion", icon: Settings, label: "Configuración" },
