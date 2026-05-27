@@ -72,12 +72,10 @@ export default function Configuracion() {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // Platform fees
-  const [listingFee, setListingFee] = useState(2.5);
-  const [fondeoFee, setFondeoFee] = useState(2.0);
-  const [adminFee, setAdminFee] = useState(1.5);
-  const [exitFee, setExitFee] = useState(3.0);
-  const [managementFee, setManagementFee] = useState(1.0); // NEW: maintenance fee
+  // Platform commissions (3 real business commissions)
+  const [upfrontFee, setUpfrontFee] = useState(2.0);       // % of investment (paid upfront)
+  const [managementFee, setManagementFee] = useState(5.0); // % of monthly rent
+  const [successFee, setSuccessFee] = useState(15.0);      // % of net capital gain at exit
 
   // Investment rules
   const [minInvestment, setMinInvestment] = useState(2000);
@@ -92,11 +90,9 @@ export default function Configuracion() {
         const snap = await getDoc(doc(db, "config", "platformFees"));
         if (snap.exists()) {
           const d = snap.data();
-          if (d.listingFee !== undefined) setListingFee(d.listingFee);
-          if (d.fondeoFee !== undefined) setFondeoFee(d.fondeoFee);
-          if (d.adminFee !== undefined) setAdminFee(d.adminFee);
-          if (d.exitFee !== undefined) setExitFee(d.exitFee);
-          if (d.managementFeeDefault !== undefined) setManagementFee(d.managementFeeDefault);
+          if (d.upfrontFee !== undefined) setUpfrontFee(d.upfrontFee);
+          if (d.managementFee !== undefined) setManagementFee(d.managementFee);
+          if (d.successFee !== undefined) setSuccessFee(d.successFee);
           if (d.minInvestment !== undefined) setMinInvestment(d.minInvestment);
           if (d.maxInvestment !== undefined) setMaxInvestment(d.maxInvestment);
           if (d.maxFractionsPct !== undefined) setMaxFractionsPct(d.maxFractionsPct);
@@ -117,11 +113,9 @@ export default function Configuracion() {
       await setDoc(
         doc(db, "config", "platformFees"),
         {
-          listingFee,
-          fondeoFee,
-          adminFee,
-          exitFee,
-          managementFeeDefault: managementFee,
+          upfrontFee,
+          managementFee,
+          successFee,
           minInvestment,
           maxInvestment,
           maxFractionsPct,
@@ -165,18 +159,60 @@ export default function Configuracion() {
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* ── Platform fees ─────────────────────────────────────────────── */}
-        <Section title="Comisiones de plataforma" description="Modificaciones afectan nuevas operaciones">
-          <FeeRow label="Listing fee (cobrado al desarrollador)" value={listingFee} onChange={setListingFee} />
-          <FeeRow label="Fondeo fee (cobrado al inversor)" value={fondeoFee} onChange={setFondeoFee} />
-          <FeeRow label="Admin fee (mensual sobre renta)" value={adminFee} onChange={setAdminFee} />
-          <FeeRow label="Exit fee (al venderse la propiedad)" value={exitFee} onChange={setExitFee} />
-          <FeeRow
-            label="Fee de mantenimiento (anual por inversor)"
-            description="Se descuenta del retorno bruto antes de distribuir. Default aplicable a todas las propiedades."
-            value={managementFee}
-            onChange={setManagementFee}
-          />
+        <Section
+          title="Comisiones de plataforma"
+          description="Modificaciones afectan nuevas operaciones. Los porcentajes aquí configurados se aplican globalmente."
+        >
+          {/* Comisión 1 */}
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-bold shrink-0">1</div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">Comisión de Inversión (Upfront Fee)</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Se cobra una sola vez al momento de invertir, sobre el monto total de la inversión. Ej: inversión de $10,000 → comisión de ${(10000 * upfrontFee / 100).toFixed(0)}.</p>
+              </div>
+            </div>
+            <FeeRow
+              label="Upfront Fee"
+              description="% del monto de inversión · cobrado al confirmar"
+              value={upfrontFee}
+              onChange={setUpfrontFee}
+            />
+          </div>
+
+          {/* Comisión 2 */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/5 border border-secondary/20">
+              <div className="h-8 w-8 rounded-full bg-secondary/15 text-secondary flex items-center justify-center text-sm font-bold shrink-0">2</div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">Comisión de Gestión (Management Fee)</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Se cobra mensualmente sobre la renta bruta generada por la propiedad. Ej: renta de $1,000/mes → comisión de ${(1000 * managementFee / 100).toFixed(0)}/mes. El inversor recibe el resto.</p>
+              </div>
+            </div>
+            <FeeRow
+              label="Management Fee"
+              description="% de la renta mensual bruta · cobrado cada mes"
+              value={managementFee}
+              onChange={setManagementFee}
+            />
+          </div>
+
+          {/* Comisión 3 */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <div className="h-8 w-8 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm font-bold shrink-0">3</div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">Comisión de Éxito (Success Fee / Carried Interest)</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Se cobra una única vez al momento del Exit (~3 años), sobre la plusvalía neta. Ej: propiedad comprada en $100,000 y vendida en $150,000 → sobre $50,000 de ganancia, Propix retiene ${(50000 * successFee / 100).toFixed(0)} y distribuye el resto.</p>
+              </div>
+            </div>
+            <FeeRow
+              label="Success Fee"
+              description="% de la plusvalía neta al momento del Exit · única vez"
+              value={successFee}
+              onChange={setSuccessFee}
+            />
+          </div>
         </Section>
 
         {/* ── Investment rules ───────────────────────────────────────────── */}

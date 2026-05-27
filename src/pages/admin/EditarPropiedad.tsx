@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Check, Upload, ImagePlus, FileText, ArrowRight, ArrowLeft, Send, AlertCircle, Loader2 } from "lucide-react";
 import PageHeader from "@/components/admin/PageHeader";
@@ -69,10 +69,8 @@ export default function EditarPropiedad() {
   const [roi, setRoi] = useState(20);
   const [monthlyRent, setMonthlyRent] = useState(1500);
   const [returnsStart, setReturnsStart] = useState("Inmediatamente");
-  const [managementFee, setManagementFee] = useState(1.0); // default 1% anual
-  const fractionPrice = fractions > 0 ? totalPrice / fractions : 0;
+  const fractionPrice = useMemo(() => (fractions > 0 ? totalPrice / fractions : 0), [totalPrice, fractions]);
 
-  // Load the global default management fee from Firestore config
   useEffect(() => {
     if (!id) return;
     
@@ -87,7 +85,6 @@ export default function EditarPropiedad() {
         setFractions(data.totalFractions || 0);
         setRoi(data.roiAnnual || 0);
         setMonthlyRent(data.monthlyIncomeEstimate || 0);
-        setManagementFee(data.managementFeeAnnual || 1.0);
         setReturnsStart(data.returnsStart || "Inmediatamente");
         setPhotos(data.gallery || []);
         setDocs(data.documents || {});
@@ -241,7 +238,7 @@ export default function EditarPropiedad() {
         pricePerFraction: fractionPrice,
         roiAnnual: roi,
         monthlyIncomeEstimate: monthlyRent,
-        managementFeeAnnual: managementFee,
+        managementFeeAnnual: 5, // platform-level management fee (5% of monthly rent)
         image: photos.length > 0 ? photos[0] : "",
         gallery: photos,
         documents: docs,
@@ -396,29 +393,24 @@ export default function EditarPropiedad() {
                     <option value="Al completar fondeo">Al completar fondeo</option>
                   </select>
                 </Field>
-                <Field
-                  label="Fee de mantenimiento anual (%)"
-                  required
-                  hint="Se descuenta del retorno bruto antes de distribuir. Por defecto toma el valor global."
-                >
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="10"
-                      value={managementFee}
-                      onChange={(e) => setManagementFee(Number(e.target.value))}
-                      className="np-input font-mono pr-8"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                {/* Commission Info Box */}
+                <div className="md:col-span-2 rounded-lg border border-border bg-muted/10 p-4 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Comisiones de plataforma aplicadas automáticamente</p>
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                      <p className="font-bold text-primary">2% Upfront Fee</p>
+                      <p className="text-muted-foreground mt-1">Cobrado al inversor en el momento de invertir, sobre el monto de inversión.</p>
+                    </div>
+                    <div className="rounded-md border border-secondary/20 bg-secondary/5 p-3">
+                      <p className="font-bold text-secondary">5% Management Fee</p>
+                      <p className="text-muted-foreground mt-1">Cobrado mensualmente sobre la renta bruta. El inversor recibe el 95% restante.</p>
+                    </div>
+                    <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+                      <p className="font-bold text-amber-400">15% Success Fee</p>
+                      <p className="text-muted-foreground mt-1">Única vez al Exit (~3 años), sobre la plusvalía neta generada al vender el inmueble.</p>
+                    </div>
                   </div>
-                  <div className="mt-1 text-[11px] text-primary/70 flex items-center gap-1">
-                    <span>ROI neto estimado:</span>
-                    <span className="font-mono font-semibold">{Math.max(0, roi - managementFee).toFixed(1)}%</span>
-                    <span className="text-muted-foreground">({roi}% bruto − {managementFee}% fee)</span>
-                  </div>
-                </Field>
+                </div>
               </div>
             </div>
 

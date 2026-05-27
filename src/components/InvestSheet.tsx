@@ -187,7 +187,7 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
 
                     <div className="space-y-2 text-sm">
                       <Row label={`${amount} fracciones`} value={formatUSD(subtotal, { decimals: 0 })} />
-                      <Row label="Comisión plataforma (2%)" value={formatUSD(fee, { decimals: 0 })} muted />
+                      <Row label="Comisión de Inversión (2% Upfront Fee)" value={formatUSD(fee, { decimals: 0 })} muted />
                       <div className="border-t border-border pt-3 flex justify-between font-semibold">
                         <span>Total a pagar</span>
                         <span className="font-mono">{formatUSD(total, { decimals: 0 })}</span>
@@ -254,35 +254,42 @@ export default function InvestSheet({ open, onClose, property, initialAmount }: 
                         <Row label="Inversión" value={formatUSD(subtotal, { decimals: 0 })} />
                         {(() => {
                           const grossRoi = property.roiAnnual || 0;
-                          const mgmtFeePct = property.managementFeeAnnual ?? 1.0;
-                          const netRoi = Math.max(0, grossRoi - mgmtFeePct);
-                          const netMonthly = (subtotal * (netRoi / 100)) / 12;
+                          const grossMonthly = (subtotal * (grossRoi / 100)) / 12;
                           return (
-                            <Row label="Retorno neto mensual est." value={`+${formatUSD(netMonthly)}`} highlight />
+                            <Row label="Retorno mensual estimado" value={`+${formatUSD(grossMonthly)}`} highlight />
                           );
                         })()}
                         <Row label="Método" value="Billetera Propix" />
                       </div>
                     </div>
 
-                    {/* Management fee disclosure */}
-                    {(() => {
-                      const mgmtFeePct = property.managementFeeAnnual ?? 1.0;
-                      const feeMonthly = (subtotal * (mgmtFeePct / 100)) / 12;
-                      return (
-                        <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-start gap-2.5">
-                          <span className="text-amber-400 text-base mt-0.5">🛡️</span>
-                          <div className="text-xs leading-relaxed">
-                            <p className="font-semibold text-amber-300 mb-0.5">Fee de mantenimiento: {mgmtFeePct}% anual</p>
-                            <p className="text-muted-foreground">
-                              Al confirmar, aceptas que <span className="text-foreground font-medium">{formatUSD(feeMonthly)}/mes</span> se deducirán
-                              como fee de administración y mantenimiento antes de tu distribución mensual.
-                              Este cargo cubre gestión operativa, mantenimiento preventivo y cobro de rentas.
-                            </p>
+                    {/* Commission disclosure */}
+                    <div className="rounded-xl border border-border bg-muted/10 px-4 py-3 space-y-2.5">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estructura de comisiones Propix</p>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-start gap-2">
+                          <span className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                          <div>
+                            <p className="font-medium text-foreground">Upfront Fee: 2% · <span className="font-mono text-primary">{formatUSD(fee, { decimals: 0 })}</span></p>
+                            <p className="text-muted-foreground">Cobrado hoy, una sola vez sobre tu inversión.</p>
                           </div>
                         </div>
-                      );
-                    })()}
+                        <div className="flex items-start gap-2">
+                          <span className="h-5 w-5 rounded-full bg-secondary/15 text-secondary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                          <div>
+                            <p className="font-medium text-foreground">Management Fee: 5% de la renta mensual</p>
+                            <p className="text-muted-foreground">Descontado cada mes de la renta antes de distribuir. Tu ROI ya refleja el neto.</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="h-5 w-5 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                          <div>
+                            <p className="font-medium text-foreground">Success Fee: 15% de la plusvalía al Exit</p>
+                            <p className="text-muted-foreground">Una sola vez ~3 años. Sobre la ganancia de capital al vender el inmueble.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                       Al confirmar aceptas el contrato de fideicomiso. Las inversiones inmobiliarias conllevan riesgos
