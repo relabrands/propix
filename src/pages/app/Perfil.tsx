@@ -9,11 +9,32 @@ import {
 } from "lucide-react";
 import { formatUSD } from "@/lib/format";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { useEffect, useState } from "react";
 
 export default function Perfil() {
   const navigate = useNavigate();
   const { user: currentUser, reset } = useAppStore();
+  const [totalInvested, setTotalInvested] = useState(0);
+  const [propertiesCount, setPropertiesCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const q = query(collection(db, "investments"), where("userId", "==", currentUser.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let invested = 0;
+      const properties = new Set();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        invested += data.amount || 0;
+        if (data.propertyId) properties.add(data.propertyId);
+      });
+      setTotalInvested(invested);
+      setPropertiesCount(properties.size);
+    });
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
 
   const logout = async () => {
     try {
@@ -75,8 +96,8 @@ export default function Perfil() {
             </span>
 
             <div className="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-border">
-              <Stat label="Invertido" value={formatUSD(portfolioStats.totalInvested, { decimals: 0 })} />
-              <Stat label="Propiedades" value={portfolioStats.propertiesCount.toString()} />
+              <Stat label="Invertido" value={formatUSD(totalInvested, { decimals: 0 })} />
+              <Stat label="Propiedades" value={propertiesCount.toString()} />
               <Stat label="Meses" value={monthsActive.toString()} />
             </div>
           </div>
