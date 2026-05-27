@@ -27,7 +27,7 @@ export default function Perfil() {
       const properties = new Set();
       snapshot.forEach(doc => {
         const data = doc.data();
-        invested += data.amount || 0;
+        invested += data.investedAmount || 0;
         if (data.propertyId) properties.add(data.propertyId);
       });
       setTotalInvested(invested);
