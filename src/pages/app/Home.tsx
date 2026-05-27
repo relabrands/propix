@@ -236,7 +236,7 @@ export default function Home() {
             <Link to="/app/explorar" className="text-xs text-primary">Ver todas</Link>
           </div>
           {featuredProperties.length > 0 ? (
-            <div className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar">
+            <div className={`-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar ${featuredProperties.length === 1 ? '*:w-full' : ''}`}>
               {featuredProperties.map((p) => (
                 <PropertyCard key={p.id} property={p} variant="horizontal" />
               ))}
