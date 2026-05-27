@@ -87,10 +87,11 @@ export default function Pagos() {
 
     try {
       const userRef = doc(db, "users", currentUser.uid);
-      const newBank: BankAccount = {
+      const newBank = {
         id: `bank_${Date.now()}`,
         bank: bankName,
         last4: accountNumber.slice(-4),
+        accountNumber: accountNumber, // Save full account number
         verified: true, // auto-verified for demo/ease of use
         type: accountType,
       };
@@ -148,6 +149,11 @@ export default function Pagos() {
         userId: currentUser.uid,
         investor: currentUser.name || currentUser.email,
         property: `Retiro a ${selectedBank.bank} (•••• ${selectedBank.last4})`,
+        bankDetails: {
+          bank: selectedBank.bank,
+          accountNumber: (selectedBank as any).accountNumber || selectedBank.last4,
+          type: (selectedBank as any).type || "No especificado",
+        },
         type: "Retiro",
         amount: amountNum,
         fee: 0,

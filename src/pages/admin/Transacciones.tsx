@@ -8,7 +8,8 @@ import { type TxType, type TxStatus } from "@/lib/adminMockData";
 import { formatUSD } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { collection, onSnapshot, query as fsQuery, orderBy, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { toast } from "sonner";
 
 const TYPES: ("Todos" | TxType | "Depósito")[] = ["Todos", "Inversión", "Distribución", "Retiro", "Depósito", "Fee"];
@@ -20,6 +21,8 @@ export default function Transacciones() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   useEffect(() => {
     const q = fsQuery(collection(db, "transactions"), orderBy("date", "desc"));
@@ -36,10 +39,33 @@ export default function Transacciones() {
 
   const handleComplete = async (txId: string) => {
     try {
-      await updateDoc(doc(db, "transactions", txId), { status: "Completada" });
+      let url = "";
+      if (selectedTx?.type === "Retiro") {
+        if (!receiptFile && !selectedTx.receiptUrl) {
+          toast.error("Debes subir un comprobante de transferencia para completar el retiro.");
+          return;
+        }
+        if (receiptFile) {
+          setUploadingReceipt(true);
+          const ext = receiptFile.name.split(".").pop();
+          const fileRef = ref(storage, `receipts/${txId}_${Date.now()}.${ext}`);
+          await uploadBytes(fileRef, receiptFile);
+          url = await getDownloadURL(fileRef);
+        }
+      }
+
+      await updateDoc(doc(db, "transactions", txId), { 
+        status: "Completada",
+        ...(url ? { receiptUrl: url } : {})
+      });
+      
       toast.success("Transacción confirmada y completada");
+      setSelectedTx(null);
+      setReceiptFile(null);
     } catch (err: any) {
       toast.error("Error al completar la transacción");
+    } finally {
+      setUploadingReceipt(false);
     }
   };
 
@@ -254,16 +280,51 @@ export default function Transacciones() {
                 </div>
               )}
 
+              {selectedTx.type === "Retiro" && selectedTx.bankDetails && (
+                <div className="pt-4 border-t border-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Datos Bancarios para Transferencia</h4>
+                  <div className="bg-muted/20 p-4 rounded-lg border border-border space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Banco</span>
+                      <span className="font-medium">{selectedTx.bankDetails.bank}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cuenta</span>
+                      <span className="font-mono">{selectedTx.bankDetails.accountNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tipo</span>
+                      <span className="capitalize">{selectedTx.bankDetails.type}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedTx.type === "Retiro" && selectedTx.status === "Pendiente" && (
+                <div className="pt-4 border-t border-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Adjuntar Comprobante de Pago</h4>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) setReceiptFile(e.target.files[0]);
+                    }}
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  />
+                  {receiptFile && <p className="text-xs text-muted-foreground mt-2">Archivo seleccionado: {receiptFile.name}</p>}
+                </div>
+              )}
+
               {selectedTx.status === "Pendiente" && (
                 <div className="flex gap-3 pt-4 border-t border-border">
                   <button
+                    disabled={uploadingReceipt}
                     onClick={() => {
                       handleComplete(selectedTx.id);
-                      setSelectedTx(null);
                     }}
-                    className="flex-1 bg-success hover:bg-success/90 text-success-foreground h-10 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 bg-success hover:bg-success/90 text-success-foreground h-10 rounded-md font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                   >
-                    <Check className="h-4 w-4" /> Aprobar
+                    {uploadingReceipt ? "Subiendo..." : <><Check className="h-4 w-4" /> Aprobar</>}
                   </button>
                   <button
                     onClick={() => {

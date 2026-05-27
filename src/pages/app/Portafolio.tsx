@@ -219,14 +219,30 @@ export default function Portafolio() {
           <h2 className="font-display text-2xl mb-3">Mis inversiones</h2>
           {investments.length > 0 ? (
             <div className="space-y-3">
-              {investments.map((inv) => {
+              {Object.values(
+                investments.reduce((acc, inv) => {
+                  if (!acc[inv.propertyId]) {
+                    acc[inv.propertyId] = { ...inv, fractionsCount: 0, investedAmount: 0, monthlyIncomeEstimate: 0 };
+                  }
+                  acc[inv.propertyId].fractionsCount += inv.fractionsCount;
+                  acc[inv.propertyId].investedAmount += inv.investedAmount;
+                  // Recalculate monthly income based on net ROI to ensure accuracy when grouping
+                  const prop = properties.find((p) => p.id === inv.propertyId);
+                  const grossRoi = prop?.roiAnnual ?? inv.roiAnnual ?? 0;
+                  const mgmtFee = prop?.managementFeeAnnual ?? 1.0;
+                  const netRoi = Math.max(0, grossRoi - mgmtFee);
+                  acc[inv.propertyId].monthlyIncomeEstimate += (inv.investedAmount * (netRoi / 100)) / 12;
+                  
+                  return acc;
+                }, {} as Record<string, Investment>)
+              ).map((inv) => {
                 const p = properties.find((pr) => pr.id === inv.propertyId);
                 const name = p?.name || inv.propertyName;
                 const image = p?.image || inv.propertyImage;
                 const status = p?.status || "rentando";
                 return (
                   <Link
-                    key={inv.id}
+                    key={inv.propertyId}
                     to={`/app/propiedad/${inv.propertyId}`}
                     className="block glass rounded-2xl p-3 flex items-center gap-3 active:scale-[0.99] transition"
                   >

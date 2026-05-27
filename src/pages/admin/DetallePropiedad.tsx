@@ -204,14 +204,10 @@ export default function AdminDetallePropiedad() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Renta Mensual Estimada</p>
                 <p className="font-mono text-lg">{formatUSD(property.monthlyIncomeEstimate, { decimals: 0 })}</p>
               </div>
-              <div className="pt-2 border-t border-border col-span-2 grid grid-cols-2 gap-4">
+              <div className="pt-2 border-t border-border col-span-2">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Inicio de Retornos</p>
                   <p className="text-sm font-medium">{property.returnsStart || "Inmediatamente"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Fee Mantenimiento Anual</p>
-                  <p className="text-sm font-medium">{property.managementFeeAnnual || 0}%</p>
                 </div>
               </div>
             </div>
