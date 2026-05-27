@@ -672,6 +672,33 @@ export default function Pagos() {
                   <span className="font-medium">{selectedTx.property}</span>
                 </div>
               )}
+              {selectedTx.type === "Distribución" && selectedTx.grossShare !== undefined && (
+                <>
+                  <div className="pt-3 pb-1 border-b border-white/5 my-2"></div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">Monto Bruto</span>
+                    <span className="font-mono">{formatUSD(selectedTx.grossShare)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">Comisión Admin (5%)</span>
+                    <span className="font-mono text-destructive">-{formatUSD(selectedTx.managementFee)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground">Retención ISRPF (10%)</span>
+                    <span className="font-mono text-destructive">-{formatUSD(selectedTx.isrpf)}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] font-medium pt-1">
+                    <span>Monto Neto (Acreditado)</span>
+                    <span className="font-mono text-success">{formatUSD(selectedTx.amount)}</span>
+                  </div>
+                </>
+              )}
+              {selectedTx.fee !== undefined && selectedTx.fee > 0 && selectedTx.type !== "Distribución" && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Comisión</span>
+                  <span className="font-mono text-destructive">-{formatUSD(selectedTx.fee)}</span>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-border">

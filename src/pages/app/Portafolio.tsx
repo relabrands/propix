@@ -224,12 +224,10 @@ export default function Portafolio() {
                   }
                   acc[inv.propertyId].fractionsCount += inv.fractionsCount;
                   acc[inv.propertyId].investedAmount += inv.investedAmount;
-                  // Recalculate monthly income based on net ROI to ensure accuracy when grouping
+                  // Recalculate monthly income based on gross ROI to ensure accuracy when grouping
                   const prop = properties.find((p) => p.id === inv.propertyId);
                   const grossRoi = prop?.roiAnnual ?? inv.roiAnnual ?? 0;
-                  const mgmtFee = prop?.managementFeeAnnual ?? 1.0;
-                  const netRoi = Math.max(0, grossRoi - mgmtFee);
-                  acc[inv.propertyId].monthlyIncomeEstimate += (inv.investedAmount * (netRoi / 100)) / 12;
+                  acc[inv.propertyId].monthlyIncomeEstimate += (inv.investedAmount * (grossRoi / 100)) / 12;
                   
                   return acc;
                 }, {} as Record<string, Investment>)
