@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Crown,
   BookOpen,
+  MessageSquareWarning,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
@@ -30,6 +31,7 @@ const NAV = [
   { to: "/admin/kyc", icon: ShieldCheck, label: "KYC / Verificaciones" },
   { to: "/admin/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/admin/configuracion", icon: Settings, label: "Configuración" },
+  { to: "/admin/reportes", icon: MessageSquareWarning, label: "Reportes" },
   { to: "/admin/notificaciones", icon: Bell, label: "Notificaciones" },
 ];
 

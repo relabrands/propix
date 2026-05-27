@@ -38,6 +38,7 @@ import AdminNotificaciones from "./pages/admin/Notificaciones";
 import AdminDetallePropiedad from "./pages/admin/DetallePropiedad";
 import AdminEditarPropiedad from "./pages/admin/EditarPropiedad";
 import AdminContabilidad from "./pages/admin/Contabilidad";
+import AdminReportes from "./pages/admin/Reportes";
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -156,6 +157,7 @@ const App = () => {
               <Route path="distribuciones" element={<AdminDistribuciones />} />
               <Route path="contabilidad" element={<AdminContabilidad />} />
               <Route path="kyc" element={<AdminKYC />} />
+              <Route path="reportes" element={<AdminReportes />} />
               <Route path="marketing" element={<AdminMarketing />} />
               <Route path="configuracion" element={<AdminConfiguracion />} />
               <Route path="notificaciones" element={<AdminNotificaciones />} />

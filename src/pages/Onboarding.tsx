@@ -106,8 +106,8 @@ function HeroStep() {
         <br /> Desde <span className="gradient-text-gold">$2,000</span>.
       </h1>
       <p className="text-muted-foreground text-base mt-4 max-w-sm text-balance">
-        Propiedades reales en Punta Cana, curadas por el equipo Propix.
-        Recibe ingresos mensuales en dólares directo a tu cuenta dominicana.
+        Gana por <strong className="text-foreground font-medium">rentabilidad fija mensual + plusvalía</strong> del inmueble.
+        Propiedades reales en el Caribe, con ciclo de inversión a corto plazo.
       </p>
     </motion.div>
   );
@@ -115,9 +115,9 @@ function HeroStep() {
 
 function HowStep() {
   const steps = [
-    { icon: Home, title: "Escoge una propiedad", body: "Vacacionales en Punta Cana ya operando." },
+    { icon: Home, title: "Escoge una propiedad", body: "Proyectos en el Caribe ya operando." },
     { icon: DollarSign, title: "Invierte desde $2,000", body: "Compra fracciones desde tu celular." },
-    { icon: TrendingUp, title: "Recibe tu renta mensual", body: "Pagos en USD a tu cuenta dominicana." },
+    { icon: TrendingUp, title: "Renta mensual + Plusvalía", body: "Recibe renta mensual en USD. Al final de la vigencia (~3 años) la propiedad se vende y recibes la ganancia de capital." },
   ];
   return (
     <motion.div

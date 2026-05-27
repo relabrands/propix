@@ -5,7 +5,7 @@ import ScreenHeader from "@/components/ScreenHeader";
 import ProgressBar from "@/components/ProgressBar";
 import EmptyState from "@/components/EmptyState";
 import { formatPct, formatUSD } from "@/lib/format";
-import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Building2, Calendar, MapPin, Minus, Plus, Share2, Users, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import InvestSheet from "@/components/InvestSheet";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
@@ -263,10 +263,18 @@ export default function PropertyDetail() {
             value={`${totalFractions - fractionsSold}/${totalFractions}`}
           />
           {property.returnsStart && (
-            <div className="col-span-2">
-              <Metric label="Inicio de retornos" value={property.returnsStart} accent="gold" />
-            </div>
+            <Metric label="Inicio de retornos" value={property.returnsStart} accent="gold" />
           )}
+          <Metric label="Vigencia (Exit)" value={`${property.investmentTerm || 36} meses`} accent="gold" />
+          <div className="col-span-2 mt-2">
+            <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 flex items-start gap-3">
+              <TrendingUp className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Rentabilidad + Plusvalía</p>
+                <p className="text-xs text-muted-foreground mt-1">Además de la renta mensual, al cumplir {property.investmentTerm || 36} meses el inmueble se vende (Exit) y las ganancias de capital se reparten entre los inversores.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Funding */}

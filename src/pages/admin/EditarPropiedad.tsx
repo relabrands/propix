@@ -69,6 +69,7 @@ export default function EditarPropiedad() {
   const [roi, setRoi] = useState(20);
   const [monthlyRent, setMonthlyRent] = useState(1500);
   const [returnsStart, setReturnsStart] = useState("Inmediatamente");
+  const [investmentTerm, setInvestmentTerm] = useState(36);
   const fractionPrice = useMemo(() => (fractions > 0 ? totalPrice / fractions : 0), [totalPrice, fractions]);
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function EditarPropiedad() {
         setRoi(data.roiAnnual || 0);
         setMonthlyRent(data.monthlyIncomeEstimate || 0);
         setReturnsStart(data.returnsStart || "Inmediatamente");
+        setInvestmentTerm(data.investmentTerm || 36);
         setPhotos(data.gallery || []);
         setDocs(data.documents || {});
         setTour(data.tourUrl || "");
@@ -239,6 +241,7 @@ export default function EditarPropiedad() {
         roiAnnual: roi,
         monthlyIncomeEstimate: monthlyRent,
         managementFeeAnnual: 5, // platform-level management fee (5% of monthly rent)
+        investmentTerm,
         image: photos.length > 0 ? photos[0] : "",
         gallery: photos,
         documents: docs,
@@ -392,6 +395,19 @@ export default function EditarPropiedad() {
                     <option value="Inmediatamente">Inmediatamente</option>
                     <option value="Al completar fondeo">Al completar fondeo</option>
                   </select>
+                </Field>
+                <Field label="Vigencia del proyecto (Meses)" required hint="Al terminar este plazo, el inmueble entra en fase de Exit.">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="1"
+                      min="12"
+                      value={investmentTerm}
+                      onChange={(e) => setInvestmentTerm(Number(e.target.value))}
+                      className="np-input font-mono pr-12"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">meses</span>
+                  </div>
                 </Field>
                 {/* Commission Info Box */}
                 <div className="md:col-span-2 rounded-lg border border-border bg-muted/10 p-4 space-y-3">
@@ -559,6 +575,7 @@ export default function EditarPropiedad() {
               <Summary label="Precio total" value={`$${totalPrice.toLocaleString()}`} mono />
               <Summary label="Fracciones" value={`${fractions} × $${fractionPrice.toFixed(2)}`} mono />
               <Summary label="ROI / Renta" value={`${roi}% · $${monthlyRent}/mes`} mono />
+              <Summary label="Vigencia / Exit" value={`${investmentTerm} meses`} mono />
               <Summary label="Fotos" value={`${photos.length} subidas`} />
               <Summary label="Documentos" value={`${Object.values(docs).filter(Boolean).length}/${REQUIRED_DOCS.length} completos`} />
             </div>

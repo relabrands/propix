@@ -55,6 +55,11 @@ export default function Pagos() {
   const [depositFile, setDepositFile] = useState<File | null>(null);
   const [uploadingDeposit, setUploadingDeposit] = useState(false);
 
+  // Transaction details and dispute state
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+
   // Use new wallet balance hook
   const { balance: availableBalance, transactions, loading } = useWalletBalance(currentUser?.uid);
 
@@ -212,12 +217,44 @@ export default function Pagos() {
       toast.success("Depósito reportado. En revisión por administración.");
       setShowDeposit(false);
       setDepositAmount("");
-      setDepositFile(null);
+      toast.success("Comprobante enviado. En revisión.");
     } catch (error) {
       console.error(error);
-      toast.error("Error al procesar el depósito");
+      toast.error("Error al enviar el comprobante");
     } finally {
       setUploadingDeposit(false);
+    }
+  };
+
+  const handleReportTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTx || !currentUser) return;
+    if (disputeReason.length < 10) {
+      toast.error("Por favor detalla más el motivo del reclamo.");
+      return;
+    }
+
+    try {
+      setSubmittingDispute(true);
+      await addDoc(collection(db, "disputes"), {
+        transactionId: selectedTx.id,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email,
+        amount: selectedTx.amount,
+        type: selectedTx.type,
+        date: selectedTx.date,
+        reason: disputeReason,
+        status: "Pendiente",
+        createdAt: new Date().toISOString()
+      });
+      toast.success("Reclamo enviado. Nuestro equipo lo revisará pronto.");
+      setDisputeReason("");
+      setSelectedTx(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al enviar el reclamo");
+    } finally {
+      setSubmittingDispute(true);
     }
   };
 
@@ -332,9 +369,13 @@ export default function Pagos() {
                 const isInvestment = t.type === "Inversión";
 
                 return (
-                  <div key={t.id} className="flex items-center gap-3 p-4">
+                  <button 
+                    key={t.id} 
+                    onClick={() => setSelectedTx(t as unknown as Transaction)}
+                    className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors active:bg-white/10"
+                  >
                     <div
-                      className={`h-10 w-10 rounded-xl grid place-items-center ${
+                      className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${
                         isReceived ? "bg-success/15 text-success" : isWithdraw ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive"
                       }`}
                     >
@@ -349,14 +390,14 @@ export default function Pagos() {
                       </p>
                     </div>
                     <p
-                      className={`font-mono text-sm font-semibold ${
+                      className={`font-mono text-sm font-semibold shrink-0 ${
                         isReceived ? "text-success" : isWithdraw ? "text-warning" : "text-destructive"
                       }`}
                     >
                       {isReceived ? "+" : "-"}
                       {formatUSD(t.amount)}
                     </p>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -590,6 +631,69 @@ export default function Pagos() {
                 {uploadingDeposit ? "Procesando..." : "Enviar Comprobante"}
               </button>
             </form>
+          </motion.div>
+        </div>
+      )}
+      {/* Transaction Details & Report Modal */}
+      {selectedTx && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            className="w-full max-w-md glass-strong rounded-t-3xl p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-display text-xl">Detalle de Transacción</h3>
+              <button onClick={() => setSelectedTx(null)} className="h-8 w-8 rounded-full glass grid place-items-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="text-center py-4 bg-white/5 rounded-2xl">
+              <p className="text-xs text-muted-foreground uppercase">{selectedTx.type}</p>
+              <p className={`text-3xl font-bold font-mono mt-1 ${selectedTx.type === "Distribución" || selectedTx.type === "Depósito" ? "text-success" : "text-foreground"}`}>
+                {selectedTx.type === "Distribución" || selectedTx.type === "Depósito" ? "+" : "-"}{formatUSD(selectedTx.amount)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">{selectedTx.date ? formatDateEs(selectedTx.date) : ""}</p>
+            </div>
+
+            <div className="space-y-3 bg-black/20 p-4 rounded-xl text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ID Transacción</span>
+                <span className="font-mono text-xs">{selectedTx.id.slice(0, 12)}...</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Estado</span>
+                <span className={selectedTx.status === "Completado" ? "text-success" : "text-warning"}>{selectedTx.status}</span>
+              </div>
+              {selectedTx.property && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Propiedad</span>
+                  <span className="font-medium">{selectedTx.property}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-sm font-semibold flex items-center gap-2 text-warning mb-3">
+                <AlertTriangle className="h-4 w-4" /> ¿Problemas con esta transacción?
+              </h4>
+              <form onSubmit={handleReportTransaction} className="space-y-3">
+                <textarea
+                  placeholder="Explica brevemente el inconveniente..."
+                  value={disputeReason}
+                  onChange={e => setDisputeReason(e.target.value)}
+                  className="w-full h-24 p-3 rounded-xl bg-white/5 border border-border focus:border-primary text-sm focus:outline-none resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={submittingDispute}
+                  className="w-full h-11 rounded-xl bg-warning/20 text-warning hover:bg-warning/30 font-semibold text-sm transition"
+                >
+                  {submittingDispute ? "Enviando..." : "Reportar Inconveniente"}
+                </button>
+              </form>
+            </div>
           </motion.div>
         </div>
       )}

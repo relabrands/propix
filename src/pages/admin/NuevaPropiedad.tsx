@@ -67,6 +67,7 @@ export default function NuevaPropiedad() {
   const [roi, setRoi] = useState(20);
   const [monthlyRent, setMonthlyRent] = useState(1500);
   const [returnsStart, setReturnsStart] = useState("Inmediatamente");
+  const [investmentTerm, setInvestmentTerm] = useState(36); // en meses (3 años default)
   const fractionPrice = fractions > 0 ? totalPrice / fractions : 0;
 
   // Step 2
@@ -197,7 +198,7 @@ export default function NuevaPropiedad() {
         pricePerFraction: fractionPrice,
         roiAnnual: roi,
         monthlyIncomeEstimate: monthlyRent,
-        managementFeeAnnual: managementFee,
+        managementFeeAnnual: 0.05,
         image: photos.length > 0 ? photos[0] : "",
         gallery: photos,
         documents: docs,
@@ -206,6 +207,7 @@ export default function NuevaPropiedad() {
         status: "disponible",
         daysLeft: 30,
         returnsStart,
+        investmentTerm,
         investorsCount: 0,
         createdAt: new Date().toISOString(),
       };
@@ -362,6 +364,19 @@ export default function NuevaPropiedad() {
                     <option value="Inmediatamente">Inmediatamente</option>
                     <option value="Al completar fondeo">Al completar fondeo</option>
                   </select>
+                </Field>
+                <Field label="Vigencia del proyecto (Meses)" required hint="Al terminar este plazo, el inmueble entra en fase de Exit.">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="1"
+                      min="12"
+                      value={investmentTerm}
+                      onChange={(e) => setInvestmentTerm(Number(e.target.value))}
+                      className="np-input font-mono pr-12"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">meses</span>
+                  </div>
                 </Field>
 
                 {/* Commission Info Box */}
@@ -530,6 +545,7 @@ export default function NuevaPropiedad() {
               <Summary label="Precio total" value={`$${totalPrice.toLocaleString()}`} mono />
               <Summary label="Fracciones" value={`${fractions} × $${fractionPrice.toFixed(2)}`} mono />
               <Summary label="ROI / Renta" value={`${roi}% · $${monthlyRent}/mes`} mono />
+              <Summary label="Vigencia / Exit" value={`${investmentTerm} meses`} mono />
               <Summary label="Fotos" value={`${photos.length} subidas`} />
               <Summary label="Documentos" value={`${Object.values(docs).filter(Boolean).length}/${REQUIRED_DOCS.length} completos`} />
             </div>
