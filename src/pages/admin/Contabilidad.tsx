@@ -420,8 +420,7 @@ export default function Contabilidad() {
           {/* Table */}
           <div className="rounded-lg border border-border bg-[hsl(var(--surface))] overflow-hidden">
             <div className="overflow-x-auto">
-              <div className="min-w-[700px]">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">Fecha</th>
@@ -470,7 +469,6 @@ export default function Contabilidad() {
                   </tfoot>
                 )}
               </table>
-              </div>
             </div>
           </div>
         </div>
@@ -515,8 +513,7 @@ export default function Contabilidad() {
           {/* Table */}
           <div className="rounded-lg border border-border bg-[hsl(var(--surface))] overflow-hidden">
             <div className="overflow-x-auto">
-              <div className="min-w-[780px]">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[800px] text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">Fecha</th>
@@ -575,7 +572,6 @@ export default function Contabilidad() {
                   </tfoot>
                 )}
               </table>
-              </div>
             </div>
           </div>
         </div>
@@ -654,8 +650,7 @@ export default function Contabilidad() {
               </span>
             </div>
             <div className="overflow-x-auto">
-              <div className="min-w-[640px]">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[660px] text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">#</th>
@@ -700,7 +695,6 @@ export default function Contabilidad() {
                   </tfoot>
                 )}
               </table>
-              </div>
             </div>
           </div>
 
