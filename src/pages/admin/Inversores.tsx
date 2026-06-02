@@ -7,7 +7,7 @@ import { Users, ShieldCheck, Clock, AlertOctagon } from "lucide-react";
 import { formatUSD } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, orderBy } from "firebase/firestore";
 import { toast } from "sonner";
 
 export default function Inversores() {
@@ -16,6 +16,7 @@ export default function Inversores() {
   const [investors, setInvestors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvestor, setSelectedInvestor] = useState<any | null>(null);
+  const [investorDistributions, setInvestorDistributions] = useState<Record<string, number>>({});
 
   const fetchInvestors = async () => {
     try {
@@ -51,6 +52,29 @@ export default function Inversores() {
 
   useEffect(() => {
     fetchInvestors();
+    // Load actual Propix distributions per investor from transactions
+    const fetchDistributions = async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, "transactions"), where("type", "==", "Distribución"), where("status", "==", "Completada"))
+        );
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+        const map: Record<string, number> = {};
+        snap.docs.forEach((d) => {
+          const t = d.data();
+          if (!t.investor || !t.date) return;
+          const txDate = new Date(t.date);
+          // Sum last 30 days as monthly approximation
+          if (txDate.getFullYear() === thisYear && txDate.getMonth() === thisMonth) {
+            map[t.investor] = (map[t.investor] || 0) + (t.amount || 0);
+          }
+        });
+        setInvestorDistributions(map);
+      } catch (e) { /* silent */ }
+    };
+    fetchDistributions();
   }, []);
 
   const handleToggleSuspend = async (investorId: string, currentSuspended: boolean) => {
@@ -164,7 +188,7 @@ export default function Inversores() {
                 <th className="text-left px-4 py-3 font-medium">Contacto</th>
                 <th className="text-right px-4 py-3 font-medium">Invertido</th>
                 <th className="text-right px-4 py-3 font-medium">Props</th>
-                <th className="text-right px-4 py-3 font-medium">Renta/mes</th>
+                <th className="text-right px-4 py-3 font-medium">Renta Propix/mes</th>
                 <th className="text-right px-4 py-3 font-medium">Registro</th>
                 <th className="text-left px-4 py-3 font-medium">KYC</th>
                 <th className="text-right px-4 py-3 font-medium">Acciones</th>
@@ -197,7 +221,9 @@ export default function Inversores() {
                     </td>
                     <td className="px-4 py-3 text-right font-mono">{formatUSD(inv.totalInvested, { decimals: 0 })}</td>
                     <td className="px-4 py-3 text-right font-mono">{inv.propertiesCount}</td>
-                    <td className="px-4 py-3 text-right font-mono text-secondary">{formatUSD(inv.monthlyIncome)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-secondary">
+                      {formatUSD(investorDistributions[inv.name] || investorDistributions[inv.email] || 0)}
+                    </td>
                     <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground">{inv.registeredAt}</td>
                     <td className="px-4 py-3">
                       <StatusPill
@@ -327,7 +353,8 @@ export default function Inversores() {
                     <DetailRow label="Profesión / Ocupación" value={selectedInvestor.profession} />
                     <DetailRow label="Empresa / Empleador" value={selectedInvestor.employer} />
                     <DetailRow label="Actividad Económica" value={selectedInvestor.economicActivity} />
-                    <DetailRow label="Ingresos Mensuales" value={formatUSD(Number(selectedInvestor.monthlyIncome || 0))} />
+                    <DetailRow label="Ingresos mensuales (declarados KYC)" value={formatUSD(Number(selectedInvestor.monthlyIncome || 0))} />
+                    <DetailRow label="Renta Propix este mes" value={formatUSD(investorDistributions[selectedInvestor.name] || investorDistributions[selectedInvestor.email] || 0)} />
                     <DetailRow label="Origen de Fondos" value={selectedInvestor.fundsSource} />
                     <DetailRow label="Experiencia Inv." value={selectedInvestor.investmentExperience} />
                     <DetailRow label="Propósito Inv." value={selectedInvestor.investmentPurpose} />
