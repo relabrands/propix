@@ -238,12 +238,12 @@ export default function Contabilidad() {
     );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <PageHeader
         title="Contabilidad"
         subtitle={`Registros financieros y cumplimiento DGII · ${filterYear}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(Number(e.target.value))}
@@ -266,7 +266,7 @@ export default function Contabilidad() {
       />
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/30 border border-border w-fit">
+      <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/30 border border-border overflow-x-auto">
         {([
           { id: "resumen", label: "Resumen", icon: BarChart2 },
           { id: "ingresos", label: "Libro de Ingresos", icon: TrendingUp },
@@ -277,14 +277,14 @@ export default function Contabilidad() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              "flex items-center gap-2 px-4 h-9 rounded-md text-sm font-medium transition-all",
+              "flex items-center gap-2 px-3 md:px-4 h-9 rounded-md text-sm font-medium transition-all whitespace-nowrap shrink-0",
               tab === t.id
                 ? "bg-[hsl(var(--surface-elevated))] text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <t.icon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t.label}</span>
+            <t.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden md:inline">{t.label}</span>
           </button>
         ))}
       </div>
@@ -293,13 +293,13 @@ export default function Contabilidad() {
       {tab === "resumen" && (
         <div className="space-y-6">
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Capital captado" value={formatUSD(totalCapital, { decimals: 0 })} icon={Building2} accent="gold" change={12.4} />
             <StatCard label="Ingresos de plataforma" value={formatUSD(totalIngresos, { decimals: 0 })} icon={TrendingUp} accent="teal" change={8.1} />
             <StatCard label="Distribuciones pagadas" value={formatUSD(totalDistribuciones, { decimals: 0 })} icon={TrendingDown} />
             <StatCard label="Balance neto plataforma" value={formatUSD(balanceNeto, { decimals: 0 })} icon={Scale} accent={balanceNeto >= 0 ? "gold" : "default"} />
           </div>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Retiros procesados" value={formatUSD(totalRetiros, { decimals: 0 })} icon={DollarSign} />
             <StatCard label="Retenciones ISRPF (10%)" value={formatUSD(totalRetenciones, { decimals: 0 })} icon={Percent} accent="teal" hint="Ley 179-09 RD" />
             <StatCard label="Inversores con distribución" value={fiscalByInvestor.length.toString()} icon={Users} />
@@ -307,9 +307,9 @@ export default function Contabilidad() {
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
             {/* Ingresos vs Egresos */}
-            <div className="xl:col-span-3 rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
+            <div className="lg:col-span-3 rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-display text-xl">Ingresos vs Distribuciones</h3>
@@ -335,7 +335,7 @@ export default function Contabilidad() {
             </div>
 
             {/* Fee breakdown pie */}
-            <div className="xl:col-span-2 rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
+            <div className="lg:col-span-2 rounded-lg border border-border bg-[hsl(var(--surface))] p-5">
               <h3 className="font-display text-xl mb-1">Desglose de Fees</h3>
               <p className="text-xs text-muted-foreground mb-3">Por tipo de ingreso</p>
               {feeBreakdown.length === 0 ? (
@@ -410,7 +410,7 @@ export default function Contabilidad() {
           </div>
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryCard label="Total ingresos" value={formatUSD(totalIngresos)} accent="gold" />
             <SummaryCard label="Fondeo fees" value={formatUSD(feeRows.filter((r) => r.tipo === "Fondeo fee").reduce((s, r) => s + r.monto, 0))} />
             <SummaryCard label="Admin fees" value={formatUSD(feeRows.filter((r) => r.tipo === "Admin fee").reduce((s, r) => s + r.monto, 0))} />
@@ -420,6 +420,7 @@ export default function Contabilidad() {
           {/* Table */}
           <div className="rounded-lg border border-border bg-[hsl(var(--surface))] overflow-hidden">
             <div className="overflow-x-auto">
+              <div className="min-w-[700px]">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20">
                   <tr>
@@ -469,6 +470,7 @@ export default function Contabilidad() {
                   </tfoot>
                 )}
               </table>
+              </div>
             </div>
           </div>
         </div>
@@ -503,7 +505,7 @@ export default function Contabilidad() {
           </div>
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryCard label="Total bruto egresado" value={formatUSD(totalDistribuciones + totalRetiros)} />
             <SummaryCard label="Distribuciones brutas" value={formatUSD(totalDistribuciones)} />
             <SummaryCard label="Retención ISRPF (10%)" value={formatUSD(totalRetenciones)} accent="amber" />
@@ -513,6 +515,7 @@ export default function Contabilidad() {
           {/* Table */}
           <div className="rounded-lg border border-border bg-[hsl(var(--surface))] overflow-hidden">
             <div className="overflow-x-auto">
+              <div className="min-w-[780px]">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20">
                   <tr>
@@ -572,6 +575,7 @@ export default function Contabilidad() {
                   </tfoot>
                 )}
               </table>
+              </div>
             </div>
           </div>
         </div>
@@ -619,7 +623,7 @@ export default function Contabilidad() {
           </div>
 
           {/* KPI Resumen fiscal */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg border border-border bg-[hsl(var(--surface))] p-4">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Inversores con distribución</p>
               <p className="font-mono text-2xl font-semibold">{fiscalByInvestor.length}</p>
@@ -640,7 +644,7 @@ export default function Contabilidad() {
 
           {/* Declaración por inversor */}
           <div className="rounded-lg border border-border bg-[hsl(var(--surface))] overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-display text-xl">Declaración de Dividendos por Inversor</h3>
                 <p className="text-xs text-muted-foreground">Para presentar al banco y la DGII · Formulario IR-17</p>
@@ -650,6 +654,7 @@ export default function Contabilidad() {
               </span>
             </div>
             <div className="overflow-x-auto">
+              <div className="min-w-[640px]">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/20">
                   <tr>
@@ -695,6 +700,7 @@ export default function Contabilidad() {
                   </tfoot>
                 )}
               </table>
+              </div>
             </div>
           </div>
 
